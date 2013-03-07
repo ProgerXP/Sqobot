@@ -1,6 +1,7 @@
 <?php namespace Sqobot;
 
 use Exception;
+use PDO;
 
 class Error extends Exception {
   public $object;
@@ -18,8 +19,31 @@ class Error extends Exception {
   }
 }
 
+class EQuery extends Error {
+  static function exec(\PDOStatement $stmt) {
+    if (!$stmt->execute()) {
+      throw new static($stmt, "Error executing PDO statement:\n  ".$stmt->queryString);
+    }
+
+    $head = substr(' '.ltrim($stmt->queryString), 0, 20);
+
+    if (strpos($head, ' INSERT ') !== false) {
+      return db()->lastInsertId();
+    } elseif (strpos($head, ' UPDATE ') !== false) {
+      return $stmt->rowCount();
+    } else {
+      return $stmt;
+    }
+  }
+}
+
 class ENoTask extends Error { }
 class ETaskError extends Error { }
+class EWrongURL extends Error { }
+class EDownload extends Error { }
+class ERegExpError extends Error { }
+  class ERegExpNoMatch extends ERegExpError { }
+  class ERegExpMismatch extends ERegExpError { }
 
 class Core {
   //= hash of mixed
@@ -130,14 +154,15 @@ function exLine(Exception $e) {
 
 function db() {
   if (!Core::$pdo) {
-    $pdo = Core::$pdo = new \PDO(cfg('dbDSN'), cfg('dbUser'), cfg('dbPassword'));
+    $pdo = Core::$pdo = new PDO(cfg('dbDSN'), cfg('dbUser'), cfg('dbPassword'));
 
     $charset = cfg('dbConCharset') and $pdo->exec('SET NAMES '.$charset);
-    $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
-    $pdo->setAttribute(\PDO::ATTR_AUTOCOMMIT, true);
-    $pdo->setAttribute(\PDO::ATTR_CASE, \PDO::CASE_NATURAL);
-    $pdo->setAttribute(\PDO::ATTR_ORACLE_NULLS, \PDO::NULL_NATURAL);
-    $pdo->setAttribute(\PDO::ATTR_STRINGIFY_FETCHES, false);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $pdo->setAttribute(PDO::ATTR_AUTOCOMMIT, true);
+    $pdo->setAttribute(PDO::ATTR_CASE, PDO::CASE_NATURAL);
+    $pdo->setAttribute(PDO::ATTR_ORACLE_NULLS, PDO::NULL_NATURAL);
+    $pdo->setAttribute(PDO::ATTR_STRINGIFY_FETCHES, false);
+    $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_OBJ);
   }
 
   return Core::$pdo;
@@ -153,6 +178,7 @@ function dbImport($sqls) {
 
 function atomic($func) {
   db()->beginTransaction();
+
   return rescue(
     function () use ($func) {
       $result = call_user_func($func);
@@ -165,8 +191,64 @@ function atomic($func) {
   );
 }
 
-function prep($sql, $options = array()) {
-  return db()->prepare($sql, $options);
+function prep($sql, $bind = array()) {
+  $stmt = db()->prepare($sql);
+
+  foreach (arrizeAny($bind) as $name => $value) {
+    is_int($name) and ++$name;
+
+    if (is_string($value)) {
+      $type = PDO::PARAM_STR;
+    } elseif (is_int($value) or is_float($value) or is_bool($value)) {
+      $type = PDO::PARAM_INT;
+    } elseif ($value === null) {
+      $type = PDO::PARAM_NULL;
+    } else {
+      $type = gettype($value);
+      throw new Error(null, "Wrong value type $type to bind to :$name passed to prep().");
+    }
+
+    $stmt->bindValue($name, $value, $type);
+  }
+
+  return $stmt;
+}
+
+//= int last insert ID for INSERTs, PDOStatement for others
+function exec($sql, $bind = array()) {
+  return EQuery::exec(prep($sql, $bind));
+}
+
+function toTimestamp($time) {
+  if (is_object($time)) {
+    return $time->getTimestamp();
+  } elseif (is_numeric($time)) {
+    return (int) $time;
+  } else {
+    return (int) strtotime($time);
+  }
+}
+
+function parseXML($str);
+  $obj = dom_import_simplexml(simplexml_load_string($str));
+  if ($obj) {
+    return $obj;
+  } else {
+    throw new Error('Cannot parse string as XML.');
+  }
+}
+
+function download($url) {
+  if (!filter_var($url, FILTER_VALIDATE_URL)) {
+    throw new EWrongURL($this, "[$url] doesn't look like a valid URL.");
+  }
+
+  $data = file_get_contents($url);
+  if (!is_string($data)) {
+    throw new EDownload($this, "Cannot download page from [$url].");
+  }
+
+  return $data;
 }
 
 function onFatal($func, $name = null) {

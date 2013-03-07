@@ -17,6 +17,7 @@ class TaskSql extends Task {
 CREATE TABLE `$table` (
   `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   `url` TEXT NOT NULL,
+  `created` DATETIME NOT NULL,
   `started` DATETIME DEFAULT NULL,
   `error` TEXT NOT NULL,
   `site` VARCHAR(50) NOT NULL,
