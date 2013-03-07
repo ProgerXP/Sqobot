@@ -33,13 +33,17 @@ spl_autoload_register(function ($class) {
   }
 
   if (substr($class, 0, 7) === NS) {
-    $short = strtolower(substr($class, 7));
+    $short = substr($class, 7);
+    $lower = strtolower($short);
+
     $files = array(
-      ROOT."sys/$short.php",
+      ROOT."user/$short.php",
+      ROOT."user/$lower.php",
+      ROOT."sys/$lower.php",
     );
 
-    if (substr($short, 0, 4) === 'task') {
-      $files[] = ROOT.'task/'.substr($short, 4).'.php';
+    if (substr($short, 0, 4) === 'Task') {
+      $files[] = ROOT.'task/'.substr($lower, 4).'.php';
     }
   } else {
     $files = array(
