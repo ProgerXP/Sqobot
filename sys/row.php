@@ -43,15 +43,15 @@ class Row {
 
   function defaults() { }
 
-  function creaate() {
+  function create() {
     $bind = $this->sqlFields();
     unset($bind['id']);
     list($fields, $bind) = S::divide($bind);
 
-    $sql = 'INSERT INTO `'.$this->table().'` VALUES (`'.join('`, `', $fields).'`)'.
-           ' ('.join(', ', S($bind, '"?"').')';
+    $sql = 'INSERT INTO `'.$this->table().'` (`'.join('`, `', $fields).'`) VALUES'.
+           ' ('.join(', ', S($bind, '"??"')).')';
     $id = exec($sql, $bind);
-    in_array('in', static::$fields) and $this->id = $id;
+    in_array('id', static::$fields) and $this->id = $id;
     return $this;
   }
 
@@ -64,12 +64,17 @@ class Row {
     return $this;
   }
 
-  function table() {
-    return static::tableName($this->table);
+  function table($new = null) {
+    if (func_num_args()) {
+      $this->table = $new;
+      return $this;
+    } else {
+      return static::tableName($this->table);
+    }
   }
 
   function sqlFields() {
-    return S(static::$fields, function ($field) {
+    return S(array_flip(static::$fields), function ($index, $field) {
       if ($this->$field instanceof \DateTime) {
         return S::sqlDatetime($this->$field->getTimestamp());
       } else {

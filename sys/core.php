@@ -194,7 +194,7 @@ function atomic($func) {
 function prep($sql, $bind = array()) {
   $stmt = db()->prepare($sql);
 
-  foreach (arrizeAny($bind) as $name => $value) {
+  foreach (S::arrizeAny($bind) as $name => $value) {
     is_int($name) and ++$name;
 
     if (is_string($value)) {
@@ -229,7 +229,7 @@ function toTimestamp($time) {
   }
 }
 
-function parseXML($str);
+function parseXML($str) {
   $obj = dom_import_simplexml(simplexml_load_string($str));
   if ($obj) {
     return $obj;

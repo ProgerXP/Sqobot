@@ -63,8 +63,8 @@ class Queue extends Row {
              array('Exception: '.exLine($e), $current->id));
 
         return $error;
-      },
-    };
+      }
+    );
   }
 
   function defaults() {
