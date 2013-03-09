@@ -123,6 +123,21 @@ function cfg($name, $wrap = null) {
   }
 }
 
+function remoteDelay($started = null) {
+  $cfg = cfg('remoteDelay') + mt_rand(0, round(cfg('remoteDelay') / 10));
+
+  if ($started === null) {
+    usleep(1000 * $cfg);
+  } elseif ($started === true) {
+    return microtime(true);
+  } else {
+    $now = microtime(true);
+    $delay = $cfg - round(($now - $started) * 1000);
+    $delay >= 10 and usleep(1000 * $delay);
+    return $now;
+  }
+}
+
 function opt($name = null, $default = null) {
   if ($name === null) {
     return Core::$cl['index'];
