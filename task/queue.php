@@ -7,9 +7,9 @@ class TaskQueue extends Task {
   }
 
   static function echoQueueInfo(Queue $queue) {
-    echo "  ID:       ", $queue->id, PHP_EOL,
-         "  URL:      ", $queue->url, PHP_EOL,
-         "  Site:     ", $queue->site, PHP_EOL;
+    echo "  ID:             ", $queue->id, PHP_EOL,
+         "  URL:            ", $queue->url, PHP_EOL,
+         "  Site:           ", $queue->site, PHP_EOL;
 
     if ($extra = $queue->extra()) {
       echo "  Extra:    ", S::json($extra), PHP_EOL;
@@ -129,11 +129,14 @@ class TaskQueue extends Task {
     $newCount = count($worker->queued);
     $s = $newCount == 1 ? '' : 's';
 
+    ob_start();
+
     echo "Done with queue item #{$worker->queue->id}. ",
          sprintf('This took %1.2f sec.', $duration), PHP_EOL,
          PHP_EOL;
 
     static::echoQueueInfo($worker->queue);
+    $summary = ob_get_flush();
 
     echo PHP_EOL,
          "The worker has added $newCount queue item$s.", PHP_EOL;
@@ -142,5 +145,94 @@ class TaskQueue extends Task {
       echo PHP_EOL, '  ', $i + 1, '.', PHP_EOL,
       static::echoQueueInfo($item);
     }
+
+    $newCount > 3 and print PHP_EOL.$summary;
+  }
+
+  function do_stats(array $args = null) {
+    if ($args === null) {
+      return print 'queue stats --table=queue';
+    }
+
+    $table = static::table($args);
+
+    $sql = "SELECT site, COUNT(1) AS count, MIN(id) AS min, MAX(id) AS max".
+           " FROM`$table` GROUP BY site";
+    $stmt = exec($sql);
+    $sites = $stmt->fetchAll();
+    $stmt->closeCursor();
+
+    $s = count($sites) == 1 ? '' : 's';
+    echo "Queue contains ", count($sites), " site$s.", PHP_EOL;
+
+    if (!$sites) {
+      return;
+    }
+
+    usort($sites, function ($a, $b) { return strcmp($a->site, $b->site); });
+
+    $sql = "SELECT COUNT(1) AS count FROM `$table` WHERE site = ? AND (error = ''".
+           " OR error LIKE 'Completed OK.%')";
+    $stErrors = prep($sql);
+
+    $sql = "SELECT COUNT(1) AS count FROM `$table` WHERE site = ? AND error = ''".
+           " AND started IS NOT NULL";
+    $stActive = prep($sql);
+
+    $sql = "SELECT COUNT(1) AS count FROM `$table` WHERE site = ? AND extra != ''";
+    $stExtra = prep($sql);
+
+    $sql = "SELECT * FROM `$table` WHERE id IN (?, ?)";
+    $stMinMax = prep($sql);
+
+    foreach ($sites as $i => $site) {
+      $stErrors->bindParam(1, $site->site);
+      $errorCount = EQuery::exec($stErrors)->fetch()->count;
+      $stErrors->closeCursor();
+
+      $stActive->bindParam(1, $site->site);
+      $activeCount = EQuery::exec($stActive)->fetch()->count;
+      $stActive->closeCursor();
+
+      $stExtra->bindParam(1, $site->site);
+      $extraCount = EQuery::exec($stExtra)->fetch()->count;
+      $stExtra->closeCursor();
+
+      echo PHP_EOL,
+           $i + 1, '. ', $site->site, PHP_EOL,
+           PHP_EOL,
+           '  Total:          ', $site->count, PHP_EOL;
+
+      static::echoCount($site, 'Errors', $stErrors);
+      static::echoCount($site, 'Active', $stActive);
+      static::echoCount($site, 'With extra', $stExtra);
+
+      if ($site->count) {
+        $stMinMax->bindParam(1, $site->min);
+        $stMinMax->bindParam(2, $site->max);
+        $min = EQuery::exec($stMinMax)->fetch();
+        $max = EQuery::exec($stMinMax)->fetch();
+        $stMinMax->closeCursor();
+
+        echo '  Min ID:         ', $site->min, ' (created ', $min->created, ')', PHP_EOL,
+             '  Max ID:         ', $site->max, ' (created ', $max->created, ')', PHP_EOL;
+      }
+    }
+  }
+
+  static function echoCount($site, $title, \PDOStatement $stmt) {
+    $stmt->bindParam(1, $site->site);
+    $count = EQuery::exec($stmt)->fetch()->count;
+    $stmt->closeCursor();
+
+    printf('  %-16s', "$title:");
+
+    if ($count) {
+      echo $count, ' (', $count - $site->count, ')';
+    } else {
+      echo '-';
+    }
+
+    echo PHP_EOL;
   }
 }

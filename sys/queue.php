@@ -17,7 +17,7 @@ class Queue extends Row {
     $where = $site ? ' AND site = :site' : '';
 
     while (true) {
-      $sql = "SELECT * FROM `$table` WHERE started IS NULL$where LIMIT 1";
+      $sql = "SELECT * FROM `$table` WHERE started IS NULL$where ORDER BY id LIMIT 1";
       $stmt = exec($sql, compact('site'));
       $next = $stmt->fetch();
       $stmt->closeCursor();

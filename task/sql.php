@@ -19,7 +19,7 @@ CREATE TABLE `$table` (
   `url` TEXT NOT NULL,
   `created` DATETIME NOT NULL,
   `started` DATETIME DEFAULT NULL,
-  `error` TEXT NOT NULL,
+  `error` TEXT COLLATE latin1_general_ci NOT NULL,
   `site` VARCHAR(50) NOT NULL,
   `extra` TEXT NOT NULL,
 
