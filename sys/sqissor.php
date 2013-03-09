@@ -3,11 +3,23 @@
 class ESqissor extends Error { }
 
 abstract class Sqissor {
+  //= null not set, Queue
   public $queue;
 
   public $sliceXML = false;
   public $transaction = true;
-  public $qneued = array();
+  public $queued = array();
+
+  //= Sqissor that has successfully operated
+  static function dequeue($site = null, $table = null) {
+    return Queue::pass(function ($queue) {
+      return static::factory($queue->site, $queue)->sliceURL($queue->url);
+    }, $site, $table);
+  }
+
+  static function make(Queue $queue = null) {
+    return new static($queue);
+  }
 
   function __construct(Queue $queue = null) {
     $this->queue = $queue;

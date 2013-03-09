@@ -29,7 +29,8 @@ class EQuery extends Error {
 
     if (strpos($head, ' INSERT ') !== false) {
       return db()->lastInsertId();
-    } elseif (strpos($head, ' UPDATE ') !== false) {
+    } elseif (strpos($head, ' UPDATE ') !== false or
+              strpos($head, ' DELETE ') !== false) {
       return $stmt->rowCount();
     } else {
       return $stmt;

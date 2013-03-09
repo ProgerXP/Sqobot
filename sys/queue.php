@@ -7,11 +7,13 @@ class Queue extends Row {
   public $url, $started, $error, $site, $extra;
 
   //= null nothing in queue, Queue
-  static function nextFree($table = null) {
+  static function nextFree($site = null, $table = null) {
     $table = static::tableName($table);
+    $where = $site ? ' AND site = :site' : '';
 
     while (true) {
-      $stmt = exec('SELECT * FROM `'.$table.'` WHERE started IS NULL LIMIT 1');
+      $sql = "SELECT * FROM `$table` WHERE started IS NULL$where LIMIT 1";
+      $stmt = exec($sql, compact('site'));
       $next = $stmt->fetch();
       $stmt->closeCursor();
 
@@ -46,20 +48,21 @@ class Queue extends Row {
   // Occurred exceptions are logged and re-thrown.
   //* $callback callable - function (Queue)
   //= mixed $callback's result
-  static function pass($callback, $table = null) {
+  static function pass($callback, $site = null, $table = null) {
     $table = static::tableName($table);
-    $timedOut = static::markTimeout($table);
-    $current = static::nextFree($table);
+    $current = static::nextFree($site, $table);
 
     return rescue(
       function () use ($callback, $current) {
-        return call_user_func($callback, $current);
+        $result = call_user_func($callback, $current);
+        prep('DELETE FROM `'.$table.'` WHERE id = ? LIMIT 1', $current->id)->execute();
+        return $result;
       },
       function ($e) use ($table, $current) {
         error(get_called_class().'::pass() has failed on row '.$current->id.
               ' in '.$table.': '.exLine($e));
 
-        exec('UPDATE `'.$table.'` SET error = ? WHERE id = ?',
+        exec('UPDATE `'.$table.'` SET error = ? WHERE id = ? LIMIT 1',
              array('Exception: '.exLine($e), $current->id));
 
         return $error;
