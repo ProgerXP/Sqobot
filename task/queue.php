@@ -5,16 +5,9 @@ class TaskQueue extends Task {
     $table = &$args['table'];
     return $table ? cfg('dbPrefix').$table : Queue::tableName();
   }
-
-  static function echoQueueInfo(Queue $queue) {
-    echo "  ID:             ", $queue->id, PHP_EOL,
-         "  URL:            ", $queue->url, PHP_EOL,
-         "  Site:           ", $queue->site, PHP_EOL;
-
-    if ($extra = $queue->extra()) {
-      echo "  Extra:    ", S::json($extra), PHP_EOL;
+    static function idList(array $list) {
+      return 'id IN ('.join(', ', array_unique(S($list, '(int) ?'))).')';
     }
-  }
 
   function do_add(array $args = null) {
     if ($args === null or !opt(1)) {
@@ -52,7 +45,7 @@ class TaskQueue extends Task {
     $where = array();
 
     if (is_numeric(opt(0))) {
-      $where[] = 'id IN ('.join(', ', array_unique(S(opt(), '(int) ?'))).')';
+      $where[] = static::idList(opt());
     } else {
       empty($args['failed']) or $where[] = 'error != \'\'';
       $site = opt(0) and $where[] = 'site = :site';
@@ -72,13 +65,20 @@ class TaskQueue extends Task {
 
   function do_amend(array $args = null) {
     if ($args === null) {
-      return print 'queue amend [SITE] --table=queue';
+      return print 'queue amend [SITE] --table=queue'.PHP_EOL.
+                   'queue amend ID [ID [...]] --table=queue';
     }
 
     $table = static::table($args);
 
     $sql = 'UPDATE `'.$table.'` SET started = NULL';
-    $site = opt(0) and $sql .= ' WHERE site = :site';
+
+    if (is_numeric(opt(0))) {
+      $sql .= ' WHERE '.static::idList(opt());
+    } else {
+      $site = opt(0) and $sql .= ' WHERE site = :site';
+    }
+
     $count = exec($sql, compact('site'));
 
     if ($count) {
@@ -148,6 +148,16 @@ class TaskQueue extends Task {
 
     $newCount > 3 and print PHP_EOL.$summary;
   }
+
+    static function echoQueueInfo(Queue $queue) {
+      echo "  ID:             ", $queue->id, PHP_EOL,
+           "  URL:            ", $queue->url, PHP_EOL,
+           "  Site:           ", $queue->site, PHP_EOL;
+
+      if ($extra = $queue->extra()) {
+        echo "  Extra:          ", S::json($extra), PHP_EOL;
+      }
+    }
 
   function do_stats(array $args = null) {
     if ($args === null) {
@@ -220,19 +230,19 @@ class TaskQueue extends Task {
     }
   }
 
-  static function echoCount($site, $title, \PDOStatement $stmt) {
-    $stmt->bindParam(1, $site->site);
-    $count = EQuery::exec($stmt)->fetch()->count;
-    $stmt->closeCursor();
+    static function echoCount($site, $title, \PDOStatement $stmt) {
+      $stmt->bindParam(1, $site->site);
+      $count = EQuery::exec($stmt)->fetch()->count;
+      $stmt->closeCursor();
 
-    printf('  %-16s', "$title:");
+      printf('  %-16s', "$title:");
 
-    if ($count) {
-      echo $count, ' (', $count - $site->count, ')';
-    } else {
-      echo '-';
+      if ($count) {
+        echo $count, ' (', $count - $site->count, ')';
+      } else {
+        echo '-';
+      }
+
+      echo PHP_EOL;
     }
-
-    echo PHP_EOL;
-  }
 }
