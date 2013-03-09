@@ -7,8 +7,18 @@ $cl = &Core::$cl['index'];
 $task = array_shift($cl);
 $func = array_shift($cl);
 
-if ("$task" === '') {
-  die("You didn't pass name of the task to run. You can use 'help TASK FUNC'.");
+if ("$task" === '' or ($task === 'help' and "$func" === '')) {
+  echo 'You didn\'t pass task name to run.', PHP_EOL,
+       PHP_EOL,
+       '  cli [help] TASK [do|FUNC] [arg#1[ ...]] [--opt[=[val]]] [-f[lags...]]', PHP_EOL,
+       PHP_EOL,
+       '  --options and -flags can appear in any position.', PHP_EOL,
+       '  "do" lets you call default task while passing arguments by index.', PHP_EOL,
+       PHP_EOL,
+       'Global options:', PHP_EOL,
+       PHP_EOL,
+       '  --silent[=1]', PHP_EOL;
+  exit(2);
 } elseif ($task === 'help') {
   S::rotate(array_shift($cl), array(&$func, &$task));
   $args = null;
@@ -17,6 +27,8 @@ if ("$task" === '') {
   $args = Core::$cl['options'];
 }
 
+$silent = !empty($args['silent']) and ob_start();
+
 try {
   Task::make($task)->call($func, $args);
 } catch (ENoTask $e) {
@@ -24,3 +36,4 @@ try {
 }
 
 $args === null and print PHP_EOL;
+$silent and ob_end_clean();
