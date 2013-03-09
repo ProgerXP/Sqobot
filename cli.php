@@ -13,6 +13,7 @@ if ("$task" === '') {
   S::rotate(array_shift($cl), array(&$func, &$task));
   $args = null;
 } else {
+  $func === 'do' and $func = '';
   $args = Core::$cl['options'];
 }
 

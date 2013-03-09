@@ -13,7 +13,8 @@ class Error extends Exception {
     throw new static($object, $msg, $previous);
   }
 
-  function __construct($object, $msg, Exception $previous = null) {
+  function __construct($object, $msg = null, Exception $previous = null) {
+    $msg === null and S::swap($object, $msg);
     $this->object = $object;
     parent::__construct($msg, 0, $previous);
   }
@@ -45,6 +46,8 @@ class EDownload extends Error { }
 class ERegExpError extends Error { }
   class ERegExpNoMatch extends ERegExpError { }
   class ERegExpMismatch extends ERegExpError { }
+class ESqissor extends Error { }
+  class ENoSqissor extends ESqissor { }
 
 class Core {
   //= hash of mixed
@@ -54,7 +57,7 @@ class Core {
   //= null for web, array of array 'values', 'index', 'flags'
   static $cl;
   //= array of callable
-  static $onFatal;
+  static $onFatal = array();
 
   static function loadConfig($file) {
     if (is_file($file) and $data = file_get_contents($file)) {
@@ -111,7 +114,8 @@ function dd() {
 }
 
 function cfg($name, $wrap = null) {
-  $value = S::pickFlat(Core::$config, $name);
+  $value = (string) S::pickFlat(Core::$config, $name);
+
   if ($value === '' or !isset($wrap)) {
     return $value;
   } else {
@@ -184,18 +188,22 @@ function dbImport($sqls) {
 }
 
 function atomic($func) {
-  db()->beginTransaction();
+  if (db()->inTransaction()) {
+    return call_user_func($func);
+  } else {
+    db()->beginTransaction();
 
-  return rescue(
-    function () use ($func) {
-      $result = call_user_func($func);
-      db()->commit();
-      return $result;
-    },
-    function () {
-      db()->rollBack();
-    }
-  );
+    return rescue(
+      function () use ($func) {
+        $result = call_user_func($func);
+        db()->commit();
+        return $result;
+      },
+      function () {
+        db()->rollBack();
+      }
+    );
+  }
 }
 
 function prep($sql, $bind = array()) {
@@ -212,7 +220,7 @@ function prep($sql, $bind = array()) {
       $type = PDO::PARAM_NULL;
     } else {
       $type = gettype($value);
-      throw new Error(null, "Wrong value type $type to bind to :$name passed to prep().");
+      throw new Error("Wrong value type $type to bind to :$name passed to prep().");
     }
 
     $stmt->bindValue($name, $value, $type);
@@ -246,16 +254,42 @@ function parseXML($str) {
 }
 
 function download($url) {
+  $url = realURL($url);
+
   if (!filter_var($url, FILTER_VALIDATE_URL)) {
-    throw new EWrongURL($this, "[$url] doesn't look like a valid URL.");
+    throw new EWrongURL("[$url] doesn't look like a valid URL.");
   }
 
   $data = file_get_contents($url);
   if (!is_string($data)) {
-    throw new EDownload($this, "Cannot download page from [$url].");
+    throw new EDownload("Cannot download page from [$url].");
   }
 
   return $data;
+}
+
+function realURL($url) {
+  $met = array($url => true);
+  $trace = function () use (&$met) { return join(' -> ', array_keys($met)); };
+
+  while ($target = cfg("url $url")) {
+    if (isset($met[$target])) {
+      error("Curricular URL mapping that depends on itself - using original URL: ".
+            $trace()." -> $target.");
+      return key($met);
+    }
+
+    $met[$target] = true;
+    $url = $target;
+  }
+
+  if (!$url) {
+    throw new EWrongURL('Empty URL given to realURL().');
+  } elseif (strrchr(substr($url, 0, 20), ':') === false and $url[0] !== '/') {
+    return 'file:///'.trim(strtr(getcwd(), '\\', '/'), '/')."/$url";
+  } else {
+    return $url;
+  }
 }
 
 function onFatal($func, $name = null) {
@@ -279,7 +313,7 @@ function offFatal($func) {
 }
 
 function rescue($body, $error, $finally = null) {
-  $catch = function ($e) use ($id, $error, $finally) {
+  $catch = function ($e) use (&$id, $error, $finally) {
     offFatal($id);
     $finally and call_user_func($finally, $e);
     $error and call_user_func($error, $e);
