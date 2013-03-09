@@ -47,7 +47,7 @@ CREATE TABLE `$table` (
   `id` int UNSIGNED NOT NULL AUTO_INCREMENT,
   `source` CHAR(100) NOT NULL,
   `site` VARCHAR(50) NOT NULL,
-  `site_id` BINARY(16) NOT NULL,
+  `site_id` VARBINARY(16) NOT NULL,
   `created` DATETIME NOT NULL,
   -- your fields here --
 

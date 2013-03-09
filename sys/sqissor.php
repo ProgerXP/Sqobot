@@ -1,7 +1,5 @@
 <?php namespace Sqobot;
 
-class ESqissor extends Error { }
-
 abstract class Sqissor {
   //= null not set, Queue
   public $queue;
@@ -11,10 +9,38 @@ abstract class Sqissor {
   public $queued = array();
 
   //= Sqissor that has successfully operated
-  static function dequeue($site = null, $table = null) {
-    return Queue::pass(function ($queue) {
-      return static::factory($queue->site, $queue)->sliceURL($queue->url);
-    }, $site, $table);
+  static function dequeue(array $options = array()) {
+    $self = get_called_class();
+
+    return Queue::pass(function ($queue) use ($self) {
+      return $self::factory($queue->site, $queue)->sliceURL($queue->url);
+    }, $options);
+  }
+
+  static function factory($site, Queue $queue = null) {
+    $class = cfg("class $site", NS.'$');
+
+    if (!$class) {
+      $class = NS.'S'.preg_replace('/\.+(.)/e', 'strtoupper("\\1")', ".$site");
+    }
+
+    if (class_exists($class)) {
+      return new $class($queue);
+    } else {
+      throw new ENoSqissor("Undefined Sqissor class [$class] of site [$site].".
+                           "You can list custom class under 'class $site=YourClass'".
+                           "line in any of Sqobot's *.conf.");
+    }
+  }
+
+  static function siteNameFrom($class) {
+    is_object($class) and $class = get_class($class);
+
+    if (S::unprefix($class, NS.'S')) {
+      return strtolower( trim(preg_replace('/[A-Z]/', '.\\0', $class), '.') );
+    } else {
+      return $class;
+    }
   }
 
   static function make(Queue $queue = null) {
@@ -22,6 +48,7 @@ abstract class Sqissor {
   }
 
   function __construct(Queue $queue = null) {
+    $this->name = static::siteNameFrom($this);
     $this->queue = $queue;
   }
 
@@ -61,21 +88,21 @@ abstract class Sqissor {
     if (preg_match($regexp, $str, $match)) {
       return isset($return) ? S::pickFlat($match, $return) : $match;
     } elseif ($error = preg_last_error()) {
-      throw new ERegExpError("Regexp error code #$error for $regexp");
+      throw new ERegExpError($this, "Regexp error code #$error for $regexp");
     } elseif (isset($return)) {
-      throw new ERegExpNoMatch("Regexp $regexp didn't match anything.");
+      throw new ERegExpNoMatch($this, "Regexp $regexp didn't match anything.");
     }
   }
 
   function regexpAll($str, $regexp, $flags = 0) {
     $flags === true and $flags = PREG_SET_ORDER;
 
-    if (preg_match_all($regexp, $str, $matches)) {
+    if (preg_match_all($regexp, $str, $matches, $flags)) {
       return $matches;
     } elseif ($error = preg_last_error()) {
-      throw new ERegExpError("Regexp error code #$error for $regexp");
+      throw new ERegExpError($this, "Regexp error code #$error for $regexp");
     } else {
-      throw new ERegExpNoMatch("Regexp $regexp didn't match anything.");
+      throw new ERegExpNoMatch($this, "Regexp $regexp didn't match anything.");
     }
   }
 
@@ -108,6 +135,6 @@ abstract class Sqissor {
   }
 
   function htmlToText($html, $charset = 'utf-8') {
-    return html_entity_decode(strip_tags($map), ENT_QUOTES, $charset);
+    return html_entity_decode(strip_tags($html), ENT_QUOTES, $charset);
   }
 }

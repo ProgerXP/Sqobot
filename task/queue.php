@@ -7,11 +7,12 @@ class TaskQueue extends Task {
   }
 
   static function echoQueueInfo(Queue $queue) {
-    echo "  URL:      ", $queue->url, PHP_EOL,
+    echo "  ID:       ", $queue->id, PHP_EOL,
+         "  URL:      ", $queue->url, PHP_EOL,
          "  Site:     ", $queue->site, PHP_EOL;
 
-    if ($queue->extra) {
-      echo "  Extra:    ", S::json($queue->extra), PHP_EOL;
+    if ($extra = $queue->extra()) {
+      echo "  Extra:    ", S::json($extra), PHP_EOL;
     }
   }
 
@@ -88,38 +89,54 @@ class TaskQueue extends Task {
     }
   }
 
+  function do_mark(array $args = null) {
+    if ($args === null) {
+      return print 'queue mark --table=queue';
+    }
+
+    if ( $count = Queue::markTimeout(static::table($args)) ) {
+      $s = $count == 1 ? '' : 's';
+      echo "Marked $count queue item$s as timed out.", PHP_EOL;
+    } else {
+      echo 'No queue items have timed out.', PHP_EOL;
+    }
+  }
+
   function do_(array $args = null) {
     if ($args === null) {
-      return print 'queue [SITE] --amend --mark --table=queue';
+      return print 'queue [do [SITE]] --amend --mark --keep --table=queue';
     }
 
     empty($args['amend']) or $this->do_amend($args);
-
-    if (!empty($args['mark'])) {
-      if ( $count = static::markTimeout($table) ) {
-        $s = $count == 1 ? '' : 's';
-        echo "Marked $count queue item$s as timed out.", PHP_EOL;
-      } else {
-        echo 'No queue items are timed out.', PHP_EOL;
-      }
-    }
+    empty($args['mark']) or $this->do_mark($args);
 
     array_intersect_key($args, array('amend'=>1, 'mark'=>1)) and print PHP_EOL;
 
-    $started = microtime(true);
-    $worker = Sqissor::dequeue(opt(0), static::table($args));
-    $duration = microtime(true) - $started;
-    $newCount = count($worker->queued);
+    $options = array(
+      'site'              => opt(0),
+      'table'             => static::table($args),
+      'keepDone'          => !empty($args['keep']),
+    );
 
-    echo "Done with queue item #{$worker->queue->id}:",
-         sprintf('This took us %1.2f sec.', $duration), PHP_EOL,
+    $started = microtime(true);
+    $worker = Sqissor::dequeue($options);
+    $duration = microtime(true) - $started;
+
+    if (!$worker) {
+      return print 'Queue is empty.';
+    }
+
+    $newCount = count($worker->queued);
+    $s = $newCount == 1 ? '' : 's';
+
+    echo "Done with queue item #{$worker->queue->id}. ",
+         sprintf('This took %1.2f sec.', $duration), PHP_EOL,
          PHP_EOL;
 
     static::echoQueueInfo($worker->queue);
 
     echo PHP_EOL,
-         "It has created $newCount new queue item", $newCount == 1 ? '' : 's', PHP_EOL,
-         $newCount ? PHP_EOL : '';
+         "The worker has added $newCount queue item$s.", PHP_EOL;
 
     foreach ($worker->queued as $i => $item) {
       echo PHP_EOL, '  ', $i + 1, '.', PHP_EOL,

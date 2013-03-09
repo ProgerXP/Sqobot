@@ -41,7 +41,10 @@ class Row {
     return $this;
   }
 
-  function defaults() { }
+  // Must return $this.
+  function defaults() {
+    return $this;
+  }
 
   function create() {
     $bind = $this->sqlFields();
@@ -74,12 +77,16 @@ class Row {
   }
 
   function sqlFields() {
-    return S(array_flip(static::$fields), function ($index, $field) {
+    $result = array();
+
+    foreach (static::$fields as $field) {
       if ($this->$field instanceof \DateTime) {
-        return S::sqlDatetime($this->$field->getTimestamp());
+        $result[$field] = S::sqlDateTime($this->$field->getTimestamp());
       } else {
-        return $this->$field;
+        $result[$field] = $this->$field;
       }
-    });
+    }
+
+    return $result;
   }
 }

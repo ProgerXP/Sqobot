@@ -27,7 +27,7 @@ abstract class Task {
     if (class_exists($class)) {
       return $class;
     } elseif ($fail) {
-      throw new ENoTask(null, "Unknown task [$task] - class [$class] is undefined.");
+      throw new ENoTask("Unknown task [$task] - class [$class] is undefined.");
     }
   }
 

@@ -8,6 +8,11 @@ class Queue extends Row {
 
   //= null nothing in queue, Queue
   static function nextFree($site = null, $table = null) {
+    if (db()->inTransaction()) {
+      throw new Error(get_called_class().'::nextFree() must not be called within'.
+                      ' a transaction as it interlocks the available item.');
+    }
+
     $table = static::tableName($table);
     $where = $site ? ' AND site = :site' : '';
 
@@ -35,7 +40,7 @@ class Queue extends Row {
   static function markTimeout($table = null) {
     $table = static::tableName($table);
 
-    $started = S::sqlDatetime(time() - $timeout = cfg('queueTimeout'));
+    $started = S::sqlDateTime(time() - $timeout = cfg('queueTimeout'));
     $error = "Timed out after $timeout seconds.";
 
     $affected = exec('UPDATE `'.$table.'` SET error = ? WHERE started < ?'.
@@ -47,27 +52,44 @@ class Queue extends Row {
 
   // Occurred exceptions are logged and re-thrown.
   //* $callback callable - function (Queue)
-  //= mixed $callback's result
-  static function pass($callback, $site = null, $table = null) {
-    $table = static::tableName($table);
-    $current = static::nextFree($site, $table);
-
-    return rescue(
-      function () use ($callback, $current) {
-        $result = call_user_func($callback, $current);
-        prep('DELETE FROM `'.$table.'` WHERE id = ? LIMIT 1', $current->id)->execute();
-        return $result;
-      },
-      function ($e) use ($table, $current) {
-        error(get_called_class().'::pass() has failed on row '.$current->id.
-              ' in '.$table.': '.exLine($e));
-
-        exec('UPDATE `'.$table.'` SET error = ? WHERE id = ? LIMIT 1',
-             array('Exception: '.exLine($e), $current->id));
-
-        return $error;
-      }
+  //= null on empty queue, mixed $callback's result
+  static function pass($callback, array $options = array()) {
+    $options += array(
+      'site'              => null,
+      'table'             => null,
+      'keepDone'          => false,
     );
+
+    $table = static::tableName($options['table']);
+    $current = static::nextFree($options['site'], $table);
+
+    if ($current) {
+      $self = get_called_class();
+      return rescue(
+        function () use ($table, $current, $callback, $options) {
+          $result = call_user_func($callback, $current);
+          $bind = array('id' => $current->id);
+
+          if ($options['keepDone']) {
+            $bind['msg'] = 'Completed OK. Keeping entry as per $keepDone option.';
+            $sql = 'UPDATE `'.$table.'` SET error = :msg WHERE id = :id LIMIT 1';
+          } else {
+            $sql = 'DELETE FROM `'.$table.'` WHERE id = :id LIMIT 1';
+          }
+
+          // not checking for query result - the queue item might have been removed
+          // which doesn't matter since it has successfully executed anyway.
+          prep($sql, $bind)->execute();
+          return $result;
+        },
+        function ($e) use ($table, $current, $self) {
+          error("$self::pass() has failed on row {$current->id} in $table: ".exLine($e));
+
+          exec('UPDATE `'.$table.'` SET error = ? WHERE id = ? LIMIT 1',
+               array('Exception: '.exLine($e), $current->id));
+        }
+      );
+    }
   }
 
   function defaults() {
