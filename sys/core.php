@@ -119,13 +119,17 @@ function cfg($name, $wrap = null) {
   }
 }
 
-function opt($name, $default = null) {
-  $group = is_int($name) ? 'index' : 'options';
-
-  if (isset(Core::$cl[$group][$name])) {
-    return Core::$cl[$group][$name];
+function opt($name = null, $default = null) {
+  if ($name === null) {
+    return Core::$cl['index'];
   } else {
-    return S::unclosure($default);
+    $group = is_int($name) ? 'index' : 'options';
+
+    if (isset(Core::$cl[$group][$name])) {
+      return Core::$cl[$group][$name];
+    } else {
+      return S::unclosure($default);
+    }
   }
 }
 
@@ -173,7 +177,9 @@ function dbImport($sqls) {
   is_array($sqls) or $sqls = explode(';', $sqls);
 
   $sum = 0;
-  foreach ($sqls as $sql) { $sql and $sum += db()->exec($sql); }
+  // closing cursor in case it's an accidental SELECT; from PHP docs:
+  // "Some drivers require to close cursor before executing next statement."
+  foreach ($sqls as $sql) { $sql and $sum += db()->exec($sql)->closeCursor(); }
   return $sum;
 }
 
@@ -273,13 +279,13 @@ function offFatal($func) {
 }
 
 function rescue($body, $error, $finally = null) {
-  $id = onFatal($catch);
-
   $catch = function ($e) use ($id, $error, $finally) {
     offFatal($id);
     $finally and call_user_func($finally, $e);
     $error and call_user_func($error, $e);
   };
+
+  $id = onFatal($catch);
 
   try {
     $result = call_user_func($body);

@@ -43,14 +43,19 @@ class TaskQueue extends Task {
 
   function do_clear(array $args = null) {
     if ($args === null) {
-      return print 'queue clear [SITE] --failed --table=queue';
+      return print 'queue clear [SITE] --failed --table=queue'.PHP_EOL.
+                   'queue clear ID [ID [...]] --table=queue';
     }
 
     $table = static::table($args);
-
     $where = array();
-    empty($args['failed']) or $where[] = 'error != \'\'';
-    $site = opt(0) and $where[] = 'site = :site';
+
+    if (is_numeric(opt(0))) {
+      $where[] = 'id IN ('.join(', ', array_unique(S(opt(), '(int) ?'))).')';
+    } else {
+      empty($args['failed']) or $where[] = 'error != \'\'';
+      $site = opt(0) and $where[] = 'site = :site';
+    }
 
     $sql = 'DELETE FROM `'.$table.'`';
     $where and $sql .= ' WHERE '.join(' AND ', $where);
@@ -71,7 +76,7 @@ class TaskQueue extends Task {
 
     $table = static::table($args);
 
-    $sql = 'UPDATE `'.$table.'` SET error = \'\'';
+    $sql = 'UPDATE `'.$table.'` SET started = NULL';
     $site = opt(0) and $sql .= ' WHERE site = :site';
     $count = exec($sql, compact('site'));
 
@@ -88,7 +93,7 @@ class TaskQueue extends Task {
       return print 'queue [SITE] --amend --mark --table=queue';
     }
 
-    empty($orgs['amend']) or $this->do_amend($args);
+    empty($args['amend']) or $this->do_amend($args);
 
     if (!empty($args['mark'])) {
       if ( $count = static::markTimeout($table) ) {
@@ -99,7 +104,7 @@ class TaskQueue extends Task {
       }
     }
 
-    array_diff_key($args, array('amend'=>1, 'mark'=>1)) and print PHP_EOL;
+    array_intersect_key($args, array('amend'=>1, 'mark'=>1)) and print PHP_EOL;
 
     $started = microtime(true);
     $worker = Sqissor::dequeue(opt(0), static::table($args));
