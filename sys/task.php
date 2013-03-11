@@ -31,6 +31,7 @@ abstract class Task {
     }
   }
 
+  // Typically returns an integer - exit code.
   function call($task, $args) {
     $func = strtolower("do_$task");
     $id = get_class($this)."->$func";

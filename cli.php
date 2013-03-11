@@ -18,7 +18,7 @@ if ("$task" === '' or ($task === 'help' and "$func" === '')) {
        'Global options:', PHP_EOL,
        PHP_EOL,
        '  --silent[=1]', PHP_EOL;
-  exit(2);
+  exit(-1);
 } elseif ($task === 'help') {
   S::rotate(array_shift($cl), array(&$func, &$task));
   $args = null;
@@ -30,10 +30,13 @@ if ("$task" === '' or ($task === 'help' and "$func" === '')) {
 $silent = !empty($args['silent']) and ob_start();
 
 try {
-  Task::make($task)->call($func, $args);
+  $code = Task::make($task)->call($func, $args);
 } catch (ENoTask $e) {
+  $code = 2;
   echo $e->getMessage();
 }
 
-$args === null and print PHP_EOL;
+// $code === 1 is returned by print.
+($args === null or $code === 1) and print PHP_EOL;
 $silent and ob_end_clean();
+exit($code);
