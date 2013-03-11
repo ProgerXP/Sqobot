@@ -17,7 +17,7 @@ class TaskCycle extends Task {
 
     $times = 1 + $args['max'];
     $until = $args['for'] ? (int) (time() + 60 * $args['for']) : PHP_INT_MAX;
-    $delay = (int) (1000 * $args['delay']);
+    $delay = (int) $args['delay'];
 
     echo 'Delay between iterations is ', $delay / 1000, ' msec.', PHP_EOL;
 
@@ -26,11 +26,12 @@ class TaskCycle extends Task {
     }
 
     for ($i = 1; $i != $times and time() < $until; ++$i) {
-      $i > 1 and usleep($delay);
+      $i > 1 and $last = remoteDelay($last, $delay);
+      $last = remoteDelay(true);
 
       echo PHP_EOL,
            $separ = '+'.str_repeat('-', 68).'+', PHP_EOL,
-           sprintf('> ITERATION %-56s <', $i), PHP_EOL,
+           sprintf('> ITERATION %-15s %40s <', $i, date('d.m.Y H:i:s')), PHP_EOL,
            $separ, PHP_EOL, PHP_EOL;
 
       try {

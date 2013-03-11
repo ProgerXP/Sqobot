@@ -181,8 +181,8 @@ class TaskQueue extends Task {
 
     usort($sites, function ($a, $b) { return strcmp($a->site, $b->site); });
 
-    $sql = "SELECT COUNT(1) AS count FROM `$table` WHERE site = ? AND (error = ''".
-           " OR error LIKE 'Completed OK.%')";
+    $sql = "SELECT COUNT(1) AS count FROM `$table` WHERE site = ? AND error != ''".
+           " AND error NOT LIKE 'Completed OK%'";
     $stErrors = prep($sql);
 
     $sql = "SELECT COUNT(1) AS count FROM `$table` WHERE site = ? AND error = ''".

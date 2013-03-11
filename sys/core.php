@@ -123,7 +123,7 @@ function cfg($name, $wrap = null) {
   }
 }
 
-function remoteDelay($started = null) {
+function remoteDelay($started = null, $delay = null) {
   $cfg = cfg('remoteDelay') + mt_rand(0, round(cfg('remoteDelay') / 10));
 
   if ($started === null) {
@@ -132,7 +132,8 @@ function remoteDelay($started = null) {
     return microtime(true);
   } else {
     $now = microtime(true);
-    $delay = $cfg - round(($now - $started) * 1000);
+    isset($delay) or $delay = $cfg;
+    $delay -= round(($now - $started) * 1000);
     $delay >= 10 and usleep(1000 * $delay);
     return $now;
   }
@@ -155,7 +156,7 @@ function opt($name = null, $default = null) {
 function log($msg, $level = 'info') {
   if (strpos(cfg('log', ' $ '), " $level ") !== false and
       $log = strftime( opt('log', cfg('logFile')) )) {
-    $msg = sprintf('$ %s [%s] [%s] %s', strtoupper($level), strftime('%H-%M %Y-%m-%d'),
+    $msg = sprintf('$ %s [%s] [%s] %s', strtoupper($level), strftime('H:i:s d-m-Y'),
                    Core::$cl ? 'cli' : S::pickFlat($_REQUEST, 'REMOTE_ADDR'), $msg);
 
     S::mkdirOf($log);
