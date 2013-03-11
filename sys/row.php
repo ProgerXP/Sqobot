@@ -49,11 +49,17 @@ class Row {
   function create() {
     $bind = $this->sqlFields();
     unset($bind['id']);
-    list($fields, $bind) = S::divide($bind);
 
-    $sql = 'INSERT INTO `'.$this->table().'` (`'.join('`, `', $fields).'`) VALUES'.
-           ' ('.join(', ', S($bind, '"??"')).')';
-    $id = exec($sql, $bind);
+    if (Atoms::active()) {
+      $id = Atoms::addRow($this, $bind);
+    } else {
+      list($fields, $bind) = S::divide($bind);
+
+      $sql = 'INSERT INTO `'.$this->table().'` (`'.join('`, `', $fields).'`) VALUES'.
+             ' ('.join(', ', S($bind, '"??"')).')';
+      $id = exec($sql, $bind);
+    }
+
     in_array('id', static::$fields) and $this->id = $id;
     return $this;
   }

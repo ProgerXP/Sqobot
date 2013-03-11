@@ -39,6 +39,7 @@ class EQuery extends Error {
   }
 }
 
+class EAtoms extends Error { }
 class ENoTask extends Error { }
 class ETaskError extends Error { }
 class EWrongURL extends Error { }
@@ -204,19 +205,26 @@ function dbImport($sqls) {
 }
 
 function atomic($func) {
+  $atomate = Atoms::enabled() and Atoms::enter();
+
   if (db()->inTransaction()) {
-    return call_user_func($func);
+    $result = call_user_func($func);
+    $atomate and Atoms::commit();
+    return $result;
   } else {
     db()->beginTransaction();
 
     return rescue(
-      function () use ($func) {
+      function () use ($func, $atomate) {
         $result = call_user_func($func);
         db()->commit();
+        $atomate and Atoms::commit();
         return $result;
       },
       function () {
-        db()->rollBack();
+        // when this exception handler is called by a Fatal Error transaction
+        // has already been rolled back by PHP.
+        db()->inTransaction() and db()->rollBack();
       }
     );
   }
