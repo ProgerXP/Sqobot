@@ -138,8 +138,7 @@ class TaskQueue extends Task {
     static::echoQueueInfo($worker->queue);
     $summary = ob_get_flush();
 
-    echo PHP_EOL,
-         "The worker has added $newCount queue item$s.", PHP_EOL;
+    echo PHP_EOL, "The worker has added $newCount queue item$s.", PHP_EOL;
 
     foreach ($worker->queued as $i => $item) {
       echo PHP_EOL, '  ', $i + 1, '.', PHP_EOL,

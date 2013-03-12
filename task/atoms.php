@@ -188,7 +188,7 @@ class TaskAtoms extends Task {
           continue;
         }
 
-        $keep or unlink($full);
+        if ($transactEach and !$keep) { unlink($full); }
         echo 'ok', PHP_EOL;
       }
     }
@@ -210,7 +210,9 @@ class TaskAtoms extends Task {
     echo "Done importing $count atom$s$errors.", PHP_EOL;
 
     if (!$keep and !$noRmDir) {
-      rmdir($src) and print "Removed source directory $src.".PHP_EOL;
+      echo "Removing source directory $src... ";
+      $transactEach ? rmdir($src) : static::rmdir($src);
+      echo 'ok', PHP_EOL;
     }
   }
 }

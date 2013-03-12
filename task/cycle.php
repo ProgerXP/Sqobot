@@ -8,7 +8,7 @@ class TaskCycle extends Task {
 
     if ($args === null) {
       echo 'cycle [...] - accepts all parameters of `queue [do]`, plus:', PHP_EOL,
-           '  --max=TIMES --for=MINUTES --delay=1000 --no-ignore', PHP_EOL, PHP_EOL;
+           '  --max=TIMES --for=MINUTES --delay=1[000] --no-ignore', PHP_EOL, PHP_EOL;
       $queuer->call('', null);
       return;
     }
@@ -18,8 +18,9 @@ class TaskCycle extends Task {
     $times = 1 + $args['max'];
     $until = $args['for'] ? (int) (time() + 60 * $args['for']) : PHP_INT_MAX;
     $delay = (int) $args['delay'];
+    if ($delay > 0 and $delay < 50) { $delay *= 1000; }
 
-    echo 'Delay between iterations is ', $delay / 1000, ' sec.', PHP_EOL;
+    echo 'Delay between iterations is ', $delay / 1000, ' msec.', PHP_EOL;
 
     if ($times < 1 and $until > time() + static::YEAR) {
       echo 'Warning: no conditions given, running forever.', PHP_EOL, PHP_EOL;
