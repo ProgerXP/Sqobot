@@ -92,7 +92,7 @@ set_error_handler(function ($severity, $msg, $file, $line) {
 }, -1);
 
 onFatal(function ($e) {
-  error('Terminated with error: '.exLine($e));
+  log('Terminated with error: '.exLine($e), 'fatal');
 });
 
 Core::loadConfig(ROOT.'default.conf');
