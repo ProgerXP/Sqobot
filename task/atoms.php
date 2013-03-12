@@ -204,8 +204,8 @@ class TaskAtoms extends Task {
     $count and print PHP_EOL;
     $count -= $errors;
 
-    $es = $errors == 1 ? '' : 's';
-    $errors = $errors ? " ($errors error$es)" : '';
+    $serrors = $errors == 1 ? '' : 's';
+    $errors = $errors ? " ($errors error$serrors)" : '';
     $s = $count == 1 ? '' : 's';
     echo "Done importing $count atom$s$errors.", PHP_EOL;
 
@@ -214,5 +214,47 @@ class TaskAtoms extends Task {
       $transactEach ? rmdir($src) : static::rmdir($src);
       echo 'ok', PHP_EOL;
     }
+  }
+
+  function do_count(array $args = null) {
+    if ($args === null) {
+      return print 'atoms count [out/atoms]';
+    }
+
+    $src = rtrim(opt(0, 'out/atoms'), '\\/');
+
+    if (!is_dir($src)) {
+      return print "No directory [$src].";
+    } elseif (!($h = opendir($src))) {
+      return print "Cannot opendir($src).";
+    }
+
+    $size = $files = $transactions = 0;
+    $max = array(0, '');
+    $min = array(PHP_INT_MAX, '');
+
+    while (($file = readdir($h)) !== false) {
+      if ($file[0] !== '.' and substr($file, -4) === '.php') {
+        $here = filesize($full = "$src/$file");
+        if (!$here) { continue; }
+
+        ++$files;
+        $size += $here;
+
+        $data = file_get_contents($full);
+        $here = substr_count($data, "\n// Transaction started");
+        $transactions += $here;
+
+        $here > $max[0] and $max = array($here, $full);
+        $here < $min[0] and $min = array($here, $full);
+      }
+    }
+
+    $sfiles = $files == 1 ? '' : 's';
+    echo "$files non-empty atom$sfiles here, ", S::sizeStr($size), " in total.", PHP_EOL,
+         PHP_EOL,
+         "  Total transactions:   $transactions", PHP_EOL,
+         "  Max transactions:     $max[0], in $max[1]", PHP_EOL,
+         "  Min transactions:     $min[0], in $min[1]", PHP_EOL;
   }
 }
