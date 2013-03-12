@@ -60,10 +60,10 @@ class TaskAtoms extends Task {
 
     while (($file = readdir($h)) !== false) {
       if ($file[0] !== '.' and substr($file, -4) === '.php') {
-        echo ++$count, ". $dir/$file...";
+        echo ++$count, ". $dir/$file... ";
 
         if (!$zip->addFile("$temp/$file", $file)) {
-          return print " cannot add it to ZIP archive!";
+          return print "cannot add it to ZIP archive!";
         }
 
         echo 'ok', PHP_EOL;
@@ -149,10 +149,11 @@ class TaskAtoms extends Task {
 
     $keep = !empty($args['keep']);
     $transactEach = empty($args['all-or-none']);
+    $max = (int) S::pickFlat($args, 'max', -1);
 
     Core::$config['atomate'] = false;
-    $count = 0;
-    $max = (int) S::pickFlat($args, 'max', -1);
+    $noRmDir = false;
+    $count = $errors = 0;
 
     $transactEach or db()->beginTransaction();
 
@@ -163,18 +164,28 @@ class TaskAtoms extends Task {
         $s = $max == 1 ? '' : 's';
         echo "Reached maximum count of $max atom$s to import - stopping (but there",
              " are more).";
-        $keep = true;
+        $noRmDir = true;
         break;
       } else {
         $full = "$src/$file";
-        echo ++$count, ". $full...";
+        echo ++$count, ". $full... ";
 
-        if ($transactEach) {
-          atomic(function () use ($full) {
+        if (!$keep and !is_writable($full)) {
+          echo 'is not writable, --keep not active - ignoring', PHP_EOL;
+          $noRmDir = ++$errors;
+          continue;
+        }
+
+        try {
+          if ($transactEach) {
+            atomic(function () use ($full) { include $full; });
+          } else {
             include $full;
-          });
-        } else {
-          include $full;
+          }
+        } catch (\Exception $e) {
+          echo 'exception ', exLine($e), '.', PHP_EOL;
+          $noRmDir = ++$errors;
+          continue;
         }
 
         $keep or unlink($full);
@@ -183,7 +194,7 @@ class TaskAtoms extends Task {
     }
 
     if (!$transactEach) {
-      echo 'Committing changes to the database as per --all-or-none...';
+      echo 'Committing changes to the database as per --all-or-none... ';
       db()->commit();
       echo 'ok', PHP_EOL;
     }
@@ -191,9 +202,15 @@ class TaskAtoms extends Task {
     closedir($h);
 
     $count and print PHP_EOL;
-    $s = $count == 1 ? '' : 's';
-    echo "Done importing $count atom$s.", PHP_EOL;
+    $count -= $errors;
 
-    $keep or rmdir($src) and print "Removed source directory $src.".PHP_EOL;
+    $es = $errors == 1 ? '' : 's';
+    $errors = $errors ? " ($errors error$es)" : '';
+    $s = $count == 1 ? '' : 's';
+    echo "Done importing $count atom$s$errors.", PHP_EOL;
+
+    if (!$keep and !$noRmDir) {
+      rmdir($src) and print "Removed source directory $src.".PHP_EOL;
+    }
   }
 }
