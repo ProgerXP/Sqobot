@@ -157,7 +157,7 @@ function opt($name = null, $default = null) {
 function log($msg, $level = 'info') {
   if (strpos(cfg('log', ' $ '), " $level ") !== false and
       $log = strftime( opt('log', cfg('logFile')) )) {
-    $msg = sprintf('$ %s [%s] [%s] %s', strtoupper($level), strftime('H:i:s d-m-Y'),
+    $msg = sprintf('$ %s [%s] [%s] %s', strtoupper($level), date('H:i:s d-m-Y'),
                    Core::$cl ? 'cli' : S::pickFlat($_REQUEST, 'REMOTE_ADDR'), $msg);
 
     S::mkdirOf($log);
@@ -205,12 +205,18 @@ function dbImport($sqls) {
 }
 
 function atomic($func) {
+  // Fatal Errors are handled by Atoms so no rolling back on them.
   $atomate = Atoms::enabled() and Atoms::enter();
 
   if (db()->inTransaction()) {
-    $result = call_user_func($func);
-    $atomate and Atoms::commit();
-    return $result;
+    try {
+      $result = call_user_func($func);
+      $atomate and Atoms::commit();
+      return $result;
+    } catch (\Exception $e) {
+      $atomate and Atoms::rollback();
+      throw $e;
+    }
   } else {
     db()->beginTransaction();
 
@@ -221,7 +227,8 @@ function atomic($func) {
         $atomate and Atoms::commit();
         return $result;
       },
-      function () {
+      function ($e, $fatal) use ($atomate) {
+        !$fatal and $atomate and Atoms::rollback();
         // when this exception handler is called by a Fatal Error transaction
         // has already been rolled back by PHP.
         db()->inTransaction() and db()->rollBack();
@@ -337,10 +344,10 @@ function offFatal($func) {
 }
 
 function rescue($body, $error, $finally = null) {
-  $catch = function ($e) use (&$id, $error, $finally) {
+  $catch = function ($e, $catchable = false) use (&$id, $error, $finally) {
     offFatal($id);
     $finally and call_user_func($finally, $e);
-    $error and call_user_func($error, $e);
+    $error and call_user_func($error, $e, $catchable !== true);
   };
 
   $id = onFatal($catch);
@@ -351,7 +358,7 @@ function rescue($body, $error, $finally = null) {
     $finally and call_user_func($finally);
     return $result;
   } catch (Exception $e) {
-    $catch($e);
+    $catch($e, true);
     throw $e;
   }
 }

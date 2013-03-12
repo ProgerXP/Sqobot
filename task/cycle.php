@@ -19,7 +19,7 @@ class TaskCycle extends Task {
     $until = $args['for'] ? (int) (time() + 60 * $args['for']) : PHP_INT_MAX;
     $delay = (int) $args['delay'];
 
-    echo 'Delay between iterations is ', $delay / 1000, ' msec.', PHP_EOL;
+    echo 'Delay between iterations is ', $delay / 1000, ' sec.', PHP_EOL;
 
     if ($times < 1 and $until > time() + static::YEAR) {
       echo 'Warning: no conditions given, running forever.', PHP_EOL, PHP_EOL;

@@ -3,10 +3,14 @@
 Atoms::$baseDest = 'out/atoms/'.date('ymd-').
                    substr(str_replace('.', '', uniqid('', true)), mt_rand(0, 14), 8).'_';
 
+register_shutdown_function(array(NS.'Atoms', 'shutdown'));
+onFatal(array(NS.'Atoms', 'panic'));
+
 class Atoms {
   static $baseDest;
   //= has of Atom
   static $stack = array();
+  static $accumulated = array();
   static $written = 0;
   //= str must be valid as a PHP name part
   static $varPrefix = "\x7F\x85";
@@ -25,7 +29,15 @@ class Atoms {
   }
 
   static function enter() {
-    static::$stack[] = array();
+    if (!static::$stack) {
+      S::mkdir($dest = dirname(static::$baseDest));
+
+      if (!is_dir($dest) or !is_writable($dest)) {
+        throw new EAtoms("Atoms directory [$dest] isn't writable.");
+      }
+    }
+
+    static::$stack[] = array(new FirstAtom);
   }
 
   static function active() {
@@ -46,28 +58,54 @@ class Atoms {
     return $result;
   }
 
-  static function abandon() {
-    array_pop(static::$stack);
-  }
+  //* $ignoreLimit bool, Exception as true
+  static function commit($ignoreLimit = false) {
+    $atoms = array_pop(static::$stack);
+    if (!is_array($atoms)) {
+      return error('Bad nesting of Atoms calls - no stack to commit().');
+    }
 
-  static function commit() {
-    if (!static::$stack) {
-      error('Bad nesting of Atoms calls - no stack to commit().');
-    } elseif ($atoms = array_pop(static::$stack)) {
-      $code = "<?php\n".
-              "// Committed ".join("\n// ", static::selfSign());
+    static::$accumulated[] = $atoms;
 
-      foreach ($atoms as $id => $atom) {
-        $lines = $atom->code($id, $atoms);
-        $lines and $code .= "\n\n".join("\n", $lines);
+    if (!$ignoreLimit) {
+      $total = array_sum(array_map('count', static::$accumulated))
+               - count(static::$accumulated);   // excluding FirstAtom's.
+      if ($total < cfg('atomsPerFile')) { return; }
+    }
+
+    $transactions = static::$accumulated;
+    // null buffer indicates that a commit is taking place.
+    static::$accumulated = null;
+
+    $code = "<?php\n// Committed ";
+
+    if ($ignoreLimit instanceof \Exception) {
+      $code .= "due to exception:\n//   ".exLine($ignoreLimit)."\n//\n// ";
+    } elseif ($ignoreLimit) {
+      $code .= "ignoring atomsPerFile limit (typically flushing on shutdown)\n// ";
+    }
+
+    $code .= join("\n// ", static::selfSign());
+
+    foreach ($transactions as $atoms) {
+      if (count($atoms) > 1 or !(reset($atoms) instanceof FirstAtom)) {
+        foreach ($atoms as $id => $atom) {
+          $lines = $atom->code($id, $atoms);
+          $lines and $code .= "\n\n".join("\n", $lines);
+        }
       }
+    }
 
+    if (isset($lines)) {
       $dest = static::generateDest();
 
       if (!file_put_contents($dest, $code, LOCK_EX)) {
         throw new EAtoms("Cannot commit atom transaction to [$dest].");
       }
     }
+
+    // indicating that the commit has been successfully finished.
+    static::$accumulated = array();
   }
 
   static function generateDest() {
@@ -80,6 +118,43 @@ class Atoms {
     S::mkdirOf($file);
     touch($file);
     return $file;
+  }
+
+  // Is called when script is abruptly halted by a Fatal Error attempting to save
+  // what's not yet lost.
+  static function panic($e) {
+    if (static::$accumulated === null) {
+      error("Critical error while committing transaction - accumulated data is".
+            " lost: ".exLine($e));
+      static::abandon();
+    }
+
+    // remove atoms not finalized by a call to  commit().
+    static::$stack = array();
+    static::shutdown($e);
+  }
+
+  static function abandon() {
+    static::$accumulated = array();
+  }
+
+  static function rollback() {
+    array_pop(static::$stack);
+  }
+
+  static function shutdown($e = null) {
+    if ($count = static::depth()) {
+      $s = $count == 1 ? '' : 's';
+      error("Ignoring leftover $count atom stack$s on shutdown.");
+    }
+
+    try {
+      static::$stack = array(array());
+      // commit accumulated items.
+      static::commit( is_object($e) ? $e : true );
+    } catch (\Exception $e) {
+      error('Exception while committing accumlated atoms on shutdown: '.exLine($e));
+    }
   }
 
   //= str atom ID
@@ -153,5 +228,19 @@ class CodeAtom extends Atom {
 
   function code($id, array $known) {
     return array("$$id = {$this->code};");
+  }
+}
+
+class FirstAtom extends Atom {
+  public $started;
+
+  function __construct() {
+    $this->started = time();
+  }
+
+  function code($id, array $known) {
+    return array($separ = '// '.str_repeat('-', 76),
+                 '// Transaction started at '.date('H:i:s', $this->started),
+                 $separ);
   }
 }
