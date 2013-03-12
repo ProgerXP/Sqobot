@@ -285,19 +285,9 @@ function parseXML($str) {
   }
 }
 
-function download($url) {
-  $url = realURL($url);
-
-  if (!filter_var($url, FILTER_VALIDATE_URL)) {
-    throw new EWrongURL("[$url] doesn't look like a valid URL.");
-  }
-
-  $data = file_get_contents($url);
-  if (!is_string($data)) {
-    throw new EDownload("Cannot download page from [$url].");
-  }
-
-  return $data;
+//* $headers hash of str/array, str 'Referer'
+function download($url, $headers = array()) {
+  return Download::it($url, $headers);
 }
 
 function realURL($url) {
