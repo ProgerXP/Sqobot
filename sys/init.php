@@ -100,7 +100,7 @@ Core::loadConfig(ROOT.'default.conf');
 if (defined('STDIN') and isset($argv)) {
   array_shift($argv);   // script.php
   reset($argv) === '--' and array_shift($argv);
-  Core::$cl = S::parseCL($argv);
+  Core::$cl = S::parseCL($argv, true);
 }
 
 $chdir = opt('chdir', ROOT) and chdir($chdir);

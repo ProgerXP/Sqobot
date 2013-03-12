@@ -275,10 +275,11 @@ function toTimestamp($time) {
   }
 }
 
+//= DOMDocument
 function parseXML($str) {
-  $obj = dom_import_simplexml(simplexml_load_string($str));
-  if ($obj) {
-    return $obj;
+  $doc = new \DOMDocument;
+  if ($doc->loadXML($str)) {
+    return $doc;
   } else {
     throw new Error('Cannot parse string as XML.');
   }

@@ -250,6 +250,8 @@ class TaskAtoms extends Task {
       }
     }
 
+    closedir($h);
+
     $sfiles = $files == 1 ? '' : 's';
     echo "$files non-empty atom$sfiles here, ", S::sizeStr($size), " in total.", PHP_EOL,
          PHP_EOL,

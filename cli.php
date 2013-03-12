@@ -39,4 +39,4 @@ try {
 // $code === 1 is returned by print.
 ($args === null or $code === 1) and print PHP_EOL;
 $silent and ob_end_clean();
-exit($code);
+exit((int) $code);
