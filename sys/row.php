@@ -50,7 +50,7 @@ class Row {
     $bind = $this->sqlFields();
     unset($bind['id']);
 
-    if (Atoms::active()) {
+    if (Atoms::enabled(__FUNCTION__)) {
       $id = Atoms::addRow($this, $bind);
     } else {
       list($fields, $bind) = S::divide($bind);
@@ -65,11 +65,17 @@ class Row {
   }
 
   function update() {
-    $fields = S(static::$fields, '"`?` = ?"');
-    $bind = array_values($this->sqlFields());
+    if (Atoms::enabled(__FUNCTION__)) {
+      $id = Atoms::addRow($this, $bind, __FUNCTION__);
+    } else {
+      $fields = S(static::$fields, '"`?` = ?"');
+      $bind = array_values($this->sqlFields());
 
-    $sql = 'UPDATE `'.$this->table().'` SET `'.join(', ', $fields);
-    exec($sql, $bind);
+      $sql = 'UPDATE `'.$this->table().'` SET `'.join(', ', $fields).
+             ' WHERE site = :site AND site_id = :site_id';
+      exec($sql, $bind);
+    }
+
     return $this;
   }
 

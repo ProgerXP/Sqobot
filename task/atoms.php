@@ -151,7 +151,7 @@ class TaskAtoms extends Task {
     $transactEach = empty($args['all-or-none']);
     $max = (int) S::pickFlat($args, 'max', -1);
 
-    Core::$config['atomate'] = false;
+    Core::$config['atomate'] = '';
     $noRmDir = false;
     $count = $errors = 0;
 

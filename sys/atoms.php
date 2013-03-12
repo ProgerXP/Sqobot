@@ -11,8 +11,12 @@ class Atoms {
   //= str must be valid as a PHP name part
   static $varPrefix = "\x7F\x85";
 
-  static function enabled() {
-    return cfg('atomate');
+  static function enabled($opType = null) {
+    if ($opType) {
+      return strpos(' '.cfg('atomate').' ', " $opType ") !== false;
+    } else {
+      return trim(cfg('atomate')) !== '';
+    }
   }
 
   static function selfSign() {
@@ -79,8 +83,8 @@ class Atoms {
   }
 
   //= str atom ID
-  static function addRow($class, array $fields) {
-    return static::add(new RowAtom($class, $fields));
+  static function addRow($class, array $fields, $opType = 'create') {
+    return static::add(new RowAtom($class, $fields, $opType));
   }
 
   //= str atom ID
@@ -114,14 +118,16 @@ abstract class Atom {
 class RowAtom extends Atom {
   public $class;
   public $fields;
+  public $opType;   //= str method name like 'create' or 'update'
 
-  function __construct($class, array $fields) {
+  function __construct($class, array $fields, $opType = 'create') {
     $this->class = is_object($class) ? get_class($class) : $class;
     $this->fields = $fields;
+    $this->opType = $opType;
   }
 
   function code($id, array $known) {
-    $code = array("$$id = {$this->class}::createWith(array(");
+    $code = array("$$id = {$this->class}::{$this->opType}With(array(");
 
     foreach ($this->fields as $field => $value) {
       $key = sprintf('  %-23s => ', var_export($field, true));
