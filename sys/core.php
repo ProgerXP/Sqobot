@@ -21,9 +21,11 @@ class Error extends Exception {
 }
 
 class EQuery extends Error {
-  static function exec(\PDOStatement $stmt) {
+  static function exec(\PDOStatement $stmt, $returnStmt = false) {
     if (!$stmt->execute()) {
       throw new static($stmt, "Error executing PDO statement:\n  ".$stmt->queryString);
+    } elseif ($returnStmt) {
+      return $stmt;
     }
 
     $head = substr(' '.ltrim($stmt->queryString), 0, 20);

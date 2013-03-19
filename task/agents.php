@@ -19,7 +19,7 @@ class TaskAgents extends Task {
     $taken = array();
     $ignored = 0;
 
-    $f = fopen('agents.txt', opt('append') ? 'a' : 'w');
+    $f = fopen('agents.txt', opt('append') ? 'ab' : 'wb');
 
     while ($max > 0 and count($taken) < $total) {
       do {

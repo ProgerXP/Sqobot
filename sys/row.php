@@ -20,6 +20,17 @@ class Row {
     return $table;
   }
 
+  static function count(array $fields = null) {
+    $sql = 'SELECT COUNT(1) AS count FROM `'.static::tableName().'`';
+    $fields and $sql .= ' WHERE '.join(' AND ', S($fields, '#"`?` = ??"'));
+
+    $stmt = exec($sql, array_values($fields));
+    $count = $stmt->fetch()->count;
+    $stmt->closeCursor();
+
+    return $count;
+  }
+
   //= Row new entry
   static function createWith($fields) {
     return static::make($fields)->create();
@@ -37,7 +48,11 @@ class Row {
   //* $fields stdClass, hash
   function fill($fields) {
     is_object($fields) and $fields = get_object_vars($fields);
-    foreach ($fields as $field => $value) { $this->$field = $value; }
+
+    foreach (static::$fields as $field) {
+      isset($fields[$field]) and $this->$field = $fields[$field];
+    }
+
     return $this;
   }
 
@@ -46,22 +61,28 @@ class Row {
     return $this;
   }
 
-  function create() {
+  function create($ignore = false) {
     $bind = $this->sqlFields();
     unset($bind['id']);
 
-    if (Atoms::enabled(__FUNCTION__)) {
+    if (Atoms::enabled( $ignore ? 'createIgnore' : 'create' )) {
       $id = Atoms::addRow($this, $bind);
     } else {
       list($fields, $bind) = S::divide($bind);
 
-      $sql = 'INSERT INTO `'.$this->table().'` (`'.join('`, `', $fields).'`) VALUES'.
+      $sql = 'INSERT'.($ignore ? ' IGNORE' : '').' INTO `'.$this->table().'`'.
+             ' (`'.join('`, `', $fields).'`) VALUES'.
              ' ('.join(', ', S($bind, '"??"')).')';
+
       $id = exec($sql, $bind);
     }
 
     in_array('id', static::$fields) and $this->id = $id;
     return $this;
+  }
+
+  function createIgnore() {
+    return $this->create(true);
   }
 
   function update() {

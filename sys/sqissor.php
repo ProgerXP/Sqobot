@@ -1,6 +1,8 @@
 <?php namespace Sqobot;
 
 abstract class Sqissor {
+  public $name;
+
   //= null not set, Queue
   public $queue;
 
@@ -53,22 +55,31 @@ abstract class Sqissor {
   }
 
   function sliceURL($url) {
-    $referrer = dirname($url);
-    strrchr($referrer, '/') === false and $referrer = null;
-    return $this->slice(download($url, $referrer));
+    if ($this->skipURL($url)) {
+      log("Skipping queued URL for [".$this->name."]: $url.");
+    } else {
+      $referrer = dirname($url);
+      strrchr($referrer, '/') === false and $referrer = null;
+      $this->slice(download($url, $referrer));
+    }
+
+    return $this;
   }
+
+  function skipURL($url) { return false; }
 
   function slice($data, $transaction = null) {
     if ( isset($transaction) ? $transaction : $this->transaction ) {
       $self = $this;
-      return atomic(function () use (&$data, $self) {
-        return $self->slice($data, false);
+      atomic(function () use (&$data, $self) {
+        $self->slice($data, false);
       });
     } else {
       $this->sliceXML and $data = parseXML($data);
       $this->doSlice($data, $this->extra());
-      return $this;
     }
+
+    return $this;
   }
 
   protected abstract function doSlice($data, array $extra);
@@ -79,10 +90,12 @@ abstract class Sqissor {
   }
 
   function enqueue($url, $site, array $extra = array()) {
-    $this->queued[] = Queue::make(compact('url', 'site'))
+    $item = Queue::make(compact('url', 'site'))
       ->extra($extra)
-      ->create();
+      ->createIgnore();
 
+    // $id will be 0 if this url + site combination is already enqueued.
+    $item->id and $this->queued[] = $item;
     return $this;
   }
 

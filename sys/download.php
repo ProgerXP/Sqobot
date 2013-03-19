@@ -86,7 +86,7 @@ class Download {
   }
 
   function open() {
-    $f = $this->handle = fopen($this->url, 'r', false, $this->createContext());
+    $f = $this->handle = fopen($this->url, 'rb', false, $this->createContext());
     if (!$f) {
       throw new EDownload("Cannot fopen({$this->url}).");
     }

@@ -5,6 +5,14 @@ class Pool extends Row {
 
   public $source, $site, $site_id, $created;
 
+  static function hasPage($site, $site_id) {
+    if (PageIndex::enabled()) {
+      return PageIndex::has(static::tableName(), $site, $site_id);
+    } else {
+      return static::count(compact('site', 'site_id'));
+    }
+  }
+
   function defaults() {
     $this->created = new \DateTime;
     $this->source = '';
@@ -14,5 +22,21 @@ class Pool extends Row {
 
   function created() {
     return toTimestamp($this->created);
+  }
+
+  function create($ignore = false) {
+    parent::create($ignore);
+
+    if (PageIndex::enabled()) {
+      $page = array(
+        'table'             => $this->table(),
+        'site'              => $this->site,
+        'site_id'           => $this->site_id,
+      );
+
+      PageIndex::make($page)->createIgnore();
+    }
+
+    return $this;
   }
 }

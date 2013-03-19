@@ -24,6 +24,7 @@ CREATE TABLE `$table` (
   `extra` TEXT NOT NULL,
 
   PRIMARY KEY (`id`),
+  UNIQUE `url` (`url`(100), `site`),
   KEY `error` (`error`(1)),
   KEY `site` (`site`),
   KEY `started` (`started`,`site`)
@@ -52,8 +53,29 @@ CREATE TABLE `$table` (
   -- your fields here --
 
   PRIMARY KEY (`id`),
-  KEY `site` (`site`,`site_id`),
+  UNIQUE `site` (`site`, `site_id`),
   KEY `created` (`created`)
+)$engine DEFAULT COLLATE=latin1_bin;
+SQL;
+
+    echo $sql, PHP_EOL;
+  }
+
+  function do_pages(array $args = null) {
+    if ($args === null) {
+      return print 'sql pages [TABLE]';
+    }
+
+    $table = cfg('dbPrefix').opt(0, 'pages');
+    $engine = cfg('dbEngine', ' ENGINE=$');
+
+    $sql = <<<SQL
+CREATE TABLE `$table` (
+  `table` varchar(50) COLLATE latin1_bin NOT NULL,
+  `site` varchar(50) COLLATE latin1_bin NOT NULL,
+  `site_id` varbinary(16) NOT NULL,
+
+  PRIMARY KEY (`table`,`site`,`site_id`)
 )$engine DEFAULT COLLATE=latin1_bin;
 SQL;
 
