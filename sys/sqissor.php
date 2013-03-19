@@ -53,7 +53,9 @@ abstract class Sqissor {
   }
 
   function sliceURL($url) {
-    return $this->slice(download($url));
+    $referrer = dirname($url);
+    strrchr($referrer, '/') === false and $referrer = null;
+    return $this->slice(download($url, $referrer));
   }
 
   function slice($data, $transaction = null) {

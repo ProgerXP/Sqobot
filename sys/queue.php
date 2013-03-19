@@ -8,19 +8,15 @@ class Queue extends Row {
 
   //= null nothing in queue, Queue
   static function nextFree($site = null, $table = null) {
+    $table = static::tableName($table);
+
     if (db()->inTransaction()) {
       throw new Error(get_called_class().'::nextFree() must not be called within'.
                       ' a transaction as it interlocks the available item.');
     }
 
-    $table = static::tableName($table);
-    $where = $site ? ' AND site = :site' : '';
-
     while (true) {
-      $sql = "SELECT * FROM `$table` WHERE started IS NULL$where ORDER BY id LIMIT 1";
-      $stmt = exec($sql, compact('site'));
-      $next = $stmt->fetch();
-      $stmt->closeCursor();
+      $next = static::peekFree($site, $table);
 
       if (!$next) {
         log("No next free queue record in $table.");
@@ -34,6 +30,21 @@ class Queue extends Row {
         return new static($next);
       }
     }
+  }
+
+  // Unlike nextFree() doesn't take ownership of the queued item.
+  //= null, stdClass
+  static function peekFree($site = null, $table = null) {
+    $table = static::tableName($table);
+
+    $where = $site ? ' AND site = :site' : '';
+    $sql = "SELECT * FROM `$table` WHERE started IS NULL$where ORDER BY id LIMIT 1";
+
+    $stmt = exec($sql, compact('site'));
+    $row = $stmt->fetch();
+    $stmt->closeCursor();
+
+    return $row;
   }
 
   //= int number of timed out rows

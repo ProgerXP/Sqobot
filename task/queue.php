@@ -244,4 +244,20 @@ class TaskQueue extends Task {
 
       echo PHP_EOL;
     }
+
+  function do_peek(array $args = null) {
+    if ($args === null) {
+      return print 'queue peek [SITE] --table=queue';
+    }
+
+    $queue = Queue::peekFree(opt(0), static::table($args));
+
+    if (!$queue) {
+      return print 'Queue is empty.';
+    }
+
+    echo 'Next queued item:', PHP_EOL, PHP_EOL;
+
+    static::echoQueueInfo(new Queue($queue));
+  }
 }

@@ -107,3 +107,7 @@ $chdir = opt('chdir', ROOT) and chdir($chdir);
 
 Core::loadConfig('default.conf');
 Core::loadConfig(opt('config', 'main').'.conf');
+
+foreach ((array) opt('cfg') as $config => $value) {
+  Core::$config[$config] = $value;
+}

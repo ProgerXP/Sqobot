@@ -4,6 +4,7 @@ class Download {
   static $agents;
   static $maxFetchSize = 20971520;      // 20 MiB
 
+  public $contextOptions;
   public $url;
   public $headers;
 
@@ -11,19 +12,13 @@ class Download {
   public $responseHeaders;
   public $data;
 
-  //* $headers array of str - no keys, e.g. 'Accept: text/html'.
-  static function contextWith(array $headers) {
-    $options = array('http' => array('header' => $headers));
-    return stream_context_create($options);
-  }
-
   static function agents() {
     if (!isset(static::$agents)) {
       if (is_file($file = 'agents.txt')) {
         $list = file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
         static::$agents = array_filter(S::trim($list));
       } else {
-        info("No User-Agents file $file - use it for better cloaking.");
+        log("No User-Agents file $file - use it for better cloaking.");
         static::$agents = array();
       }
     }
@@ -63,8 +58,16 @@ class Download {
   }
 
   function __construct($url, $headers = array()) {
+    $this->contextOptions = array(
+      'follow_location'   => cfg('dlRedirects') > 0,
+      'max_redirects'     => max(0, (int) cfg('dlRedirects')),
+      'protocol_version'  => cfg('dlProtocol'),
+      'timeout'           => (float) cfg('dlTimeout'),
+      'ignore_errors'     => !!cfg('dlFetchOnError'),
+    );
+
     $this->url($url);
-    $this->headers = S::downKeys(S::arrize($headers, 'referrer'));
+    $this->headers = S::downKeys(S::arrize($headers, 'referer'));
   }
 
   function url($new = null, $aliased = true) {
@@ -119,8 +122,9 @@ class Download {
   }
 
   function createContext() {
-    $headers = $this->normalizeHeaders();
-    return static::contextWith($headers);
+    $header = $this->normalizeHeaders();
+    $options = array('http' => compact('header') + $this->contextOptions);
+    return stream_context_create($options);
   }
 
   //= array of scalar like 'Accept: text/html'
@@ -172,10 +176,6 @@ class Download {
 
   function header_user_agent() {
     return static::randomAgent();
-  }
-
-  function header_host() {
-    return parse_url($this->url, PHP_URL_HOST);
   }
 
   function header_cache_control() {

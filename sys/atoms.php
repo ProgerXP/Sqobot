@@ -1,6 +1,6 @@
 <?php namespace Sqobot;
 
-Atoms::$baseDest = 'out/atoms/'.date('ymd-').
+Atoms::$baseDest = 'out/atoms/'.date('ymd-His-').
                    substr(str_replace('.', '', uniqid('', true)), mt_rand(0, 14), 8).'_';
 
 register_shutdown_function(array(NS.'Atoms', 'shutdown'));
@@ -92,6 +92,10 @@ class Atoms {
         foreach ($atoms as $id => $atom) {
           $lines = $atom->code($id, $atoms);
           $lines and $code .= "\n\n".join("\n", $lines);
+
+          // if kept following atoms will recognize its 0 key as atom ID and
+          // use it in expression like '$0->id' for zero-value fields.
+          if ($id === 0 and $atom instanceof FirstAtom) { unset($atoms[$id]); }
         }
       }
     }

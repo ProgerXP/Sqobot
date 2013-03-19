@@ -110,7 +110,13 @@ function dd() {
   func_num_args() or print str_repeat('-', 79).PHP_EOL;
   foreach (func_get_args() as $arg) { var_dump($arg); }
   echo PHP_EOL, PHP_EOL;
-  debug_print_backtrace();
+
+  if (defined('DEBUG_BACKTRACE_IGNORE_ARGS')) {
+    debug_print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+  } else {
+    debug_print_backtrace();
+  }
+
   exit(1);
 }
 
@@ -125,15 +131,15 @@ function cfg($name, $wrap = null) {
 }
 
 function remoteDelay($started = null, $delay = null) {
-  $cfg = cfg('remoteDelay') + mt_rand(0, round(cfg('remoteDelay') / 10));
+  isset($delay) or $delay = cfg('remoteDelay');
+  $delay += mt_rand(0, $delay / 10);
 
   if ($started === null) {
-    usleep(1000 * $cfg);
+    usleep(1000 * $delay);
   } elseif ($started === true) {
     return microtime(true);
   } else {
     $now = microtime(true);
-    isset($delay) or $delay = $cfg;
     $delay -= round(($now - $started) * 1000);
     $delay >= 10 and usleep(1000 * $delay);
     return $now;
