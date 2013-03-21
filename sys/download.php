@@ -7,10 +7,12 @@ class Download {
   public $contextOptions;
   public $url;
   public $headers;
+  //= str URL-encoded data, array upload data (handles and/or strings)
+  public $data;
 
   public $handle;
   public $responseHeaders;
-  public $data;
+  public $reply;
 
   static function agents() {
     if (!isset(static::$agents)) {
@@ -70,6 +72,26 @@ class Download {
     $this->headers = S::downKeys(S::arrize($headers, 'referer'));
   }
 
+  function __destruct() {
+    $this->close()->freeData();
+  }
+
+  function freeData($name = null) {
+    if (is_array($this->data)) {
+      if (!isset($name)) {
+        foreach ($this->data as &$file) {
+          is_resource($h = $file['data']) and fclose($h);
+        }
+      } elseif (isset($this->data[$name])) {
+        is_resource($h = $this->data[$name]['data']) and fclose($h);
+        unset($this->data[$name]);
+      }
+    }
+
+    isset($name) or $this->data = null;
+    return $this;
+  }
+
   function url($new = null, $aliased = true) {
     if ($new) {
       $aliased and $new = realURL($new);
@@ -83,6 +105,29 @@ class Download {
     } else {
       return $this->url;
     }
+  }
+
+  function method($new = null) {
+    return S::access(func_num_args(), $new, $this, $this->contextOptions['method']);
+  }
+
+  function post($data, $method = 'post') {
+    $this->method($method)->freeData();
+    $this->data = urlencode($data);
+    return $this;
+  }
+
+  //* $data str, resource - resources are freed by this instance.
+  function upload($var, $originalName, $data) {
+    $this->method('post')->freeData($var);
+    is_array($this->data) or $this->data = array();
+    $this->data[$var] = array('data' => $data, 'name' => $originalName);
+    return $this;
+  }
+
+  function basicAuth($user, $password) {
+    $this->headers['Authorization'] = 'Basic '.base64_encode("$user:$password");
+    return $this;
   }
 
   function open() {
@@ -99,8 +144,8 @@ class Download {
     $limit === -1 and $limit = PHP_INT_MAX;
     $limit = min(static::$maxFetchSize, $limit);
 
-    $this->data = stream_get_contents($this->open()->handle, $limit, $offset);
-    if (!is_string($this->data)) {
+    $this->reply = stream_get_contents($this->open()->handle, $limit, $offset);
+    if (!is_string($this->reply)) {
       throw new EDownload("Cannot get remote stream contents of [{$this->url}].");
     }
 
@@ -114,17 +159,64 @@ class Download {
   }
 
   function fetch($limit = -1) {
-    return $this->read($limit)->close();
+    $this->read($limit)->close();
+    return $this->freeData();   // clean up after request has been completed.
   }
 
   function fetchData($limit = -1) {
-    return $this->fetch($limit)->data;
+    return $this->fetch($limit)->reply;
+  }
+
+  //= str HTML within <body> or entire response if no such tag
+  function docBody() {
+    $reply = $this->fetchData();
+    preg_match('~<body>(.*)</body>~ui', $reply, $match) and $reply = $match[1];
+    return trim($reply);
   }
 
   function createContext() {
-    $header = $this->normalizeHeaders();
-    $options = array('http' => compact('header') + $this->contextOptions);
+    $options = array('http' => $this->contextOptions());
     return stream_context_create($options);
+  }
+
+  function contextOptions() {
+    $options = $this->contextOptions;
+
+    if (isset($this->data)) {
+      if (is_array($this->data)) {
+        $this->encodeMultipartData();
+      } else {
+        $this->headers['Content-Type'] = 'application/x-www-form-urlencoded';
+      }
+
+      $this->headers['Content-Length'] = strlen($this->data);
+      $options['content'] = $this->data;
+    }
+
+    return array('header' => $this->normalizeHeaders()) + $options;
+  }
+
+  function encodeMultipartData() {
+    $data = &$this->data;
+    $mail = new \MiMeil('', '');
+
+    foreach ($data as $var => &$file) {
+      if (is_resource($h = $file['data'])) {
+        $read = stream_get_contents($h);
+        fclose($h);
+        $file['data'] = $read;
+      }
+
+      $name = $file['name'];
+
+      $file['headers'] = array(
+        'Content-Type' => $mail->MimeByExt(S::ext($name, 'application/octet-stream')),
+        'Content-Disposition' => 'form-data; name="'.$var.'"; filename="'.$name.'"',
+      );
+    }
+
+    // join all data strings into one string using generated MIME boundary.
+    $data = $mail->BuildAttachments($data, $this->headers, 'multipart/form-data');
   }
 
   //= array of scalar like 'Accept: text/html'
