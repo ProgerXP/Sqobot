@@ -503,7 +503,7 @@ class Functions {
   }
 
   //= null, string, array
-  static function last($v, $count = 1) {
+  static function last($v, $count = 1, $func = null) {
     if (func_num_args() == 1 and is_array($v)) {
       return end($v);     // optimization
     } elseif ($func or !is_int($count)) {
@@ -645,9 +645,10 @@ class Functions {
   //* $depth int, bool - if true will act recursively on any depth; if 0 or false -
   //    will return $v as is; other values will be decreasing for each nested array.
   //= array, mixed
-  static function deepMap($v, $func = null, $depth = false, $key = null) {
+  static function deepMap($v, $func = null, $depth = true, $key = null) {
     if (is_array($v)) {
-      return static::deepMapper($key, $v, Callback::parse($func), $depth);
+      static::deepMapper($key, $v, Callback::parse($func), $depth);
+      return $v;
     } else {
       return $func($v, $key);
     }
@@ -1113,7 +1114,7 @@ class Utils extends Functions {
     return isset($timestamp) ? gmdate('h:i:s', $timestamp) : gmdate('h:i:s');
   }
 
-  static function sqlDatetime($timestamp = null) {
+  static function sqlDateTime($timestamp = null) {
     $format = 'Y-m-d h:i:s';
     return isset($timestamp) ? gmdate($format, $timestamp) : gmdate($format);
   }
@@ -1126,7 +1127,7 @@ class Utils extends Functions {
     return static::parseTime('H:i:s', $str);
   }
 
-  static function parseSqlDatetime($str) {
+  static function parseSqlDateTime($str) {
     return static::parseTime('Y-m-d H:i:s', $str);
   }
 
@@ -1306,15 +1307,32 @@ class Utils extends Functions {
   // For details see http://proger.i-forge.net/ein#command-line.
   //
   //* $args array - PHP's $argv, list of raw command-line options given by index.
-  //* $arrays array - listed keys will be always arrays in returned 'options'.
+  //* $arrays true, array - listed keys will be always arrays in returned 'options'.
+  //  If exactly 'true' then arrays will be created on demand.
+  //
   //= array with 3 arrays: flags (array of true), options (hash of str), index (array of str)
   //
   //? parseCL(array('--option=X', '-abc'))
   //    //=> array( array('options' => array('option' => 'X'), 'flags' => ...) )
   //? parseCL(array('--option=X', '-abc'), array('option'))
   //    //=> array( array('options' => array('option' => array('X')), 'flags' => ...) )
+  //
+  //? parseCL(array('--arr[]=1', '--arr[]=2'))
+  //    // 'options' is array('arr' => '2')
+  //? parseCL(array('--arr[]=1', '--arr[]=2'), array('woo'))
+  //    // exactly as above
+  //? parseCL(array('--arr[]=1', '--arr[]=2'), array('arr'))
+  //    // 'options' is array('arr' => array('1', '2'))
+  //? parseCL(array('--arr=1''), array('arr'))
+  //    // 'options' is array('arr' => array('1'))
+  //? parseCL(array('--arr=1''), true)
+  //    // 'options' is array('arr' => '1')
+  //? parseCL(array('--arr=1''))
+  //    // 'options' is array('arr' => '1')
+  //? parseCL(array('--arr[]=1''), true)
+  //    // 'options' is array('arr' => array('1'))
   static function parseCL($args, $arrays = array()) {
-      $arrays = array_flip($arrays);
+      $arrays === true or $arrays = array_flip($arrays);
       $flags = $options = $index = array();
 
       foreach ($args as $i => &$arg) {
@@ -1340,7 +1358,11 @@ class Utils extends Functions {
                   $subKey = null;
                 }
 
-                if ($subKey !== null and isset( $arrays[$key] )) {
+                if ($subKey !== null and ($arrays === true or isset( $arrays[$key] ))) {
+                  if (isset( $options[$key] ) and !is_array( $options[$key] )) {
+                    $options[$key] = array($options[$key]);
+                  }
+
                   $subKey === '' ? $options[$key][] = $value
                                  : $options[$key][$subKey] = $value;
                 } else {
@@ -1583,7 +1605,7 @@ class Utils extends Functions {
     $range = explode(' ', trim($str));
     $allBut = static::unprefix($range, array('-'));
 
-    return array($allBut, static::collect($range, function ($num) {
+    return array($allBut, static::build($range, function ($num) {
       $from = strtok($num, '-');
       return range($from, strtok(null) ?: $from);
     }));
@@ -1945,54 +1967,3 @@ function init($namespace = '\\', $name = 'S', $class = 'Functions') {
 function initEx($namespace = '\\', $name = 'S') {
   init($namespace, $name, 'Utils');
 }
-
-
-$a = array(' x', 'A__');
-
-//$t = microtime(true);
-//$r = array();
-//for ($i = 0; $i < 1000; ++$i) {
-//  foreach ($a as $value) { $r[] = trim($value, ' _'); }
-//}
-//var_dump($max=microtime(true)-$t);
-//
-//$t = microtime(true);
-//$r = array();
-//for ($i = 0; $i < 1000; ++$i) {
-//  foreach ($a as $value) { $r[] = call_user_func('trim', $value, ' _'); }
-//}
-//var_dump($max=microtime(true)-$t);
-
-//$t = microtime(true);
-//for ($i = 0; $i < 1000; ++$i) {
-//  Functions::make($a, array('.trim', ' _'));
-//}
-//var_dump($max=microtime(true)-$t);
-
-//$fn = Callback::parse(array('.trim', ' _'), true);
-//$t = microtime(true);
-//for ($i = 0; $i < 1000; ++$i) {
-//  Functions::map($a, $fn);
-//}
-//var_dump($max=microtime(true)-$t);
-//
-//$fn = Callback::parse('trim', true);
-//$t = microtime(true);
-//for ($i = 0; $i < 1000; ++$i) {
-//  Functions::map($a, $fn);
-//}
-//var_dump($max=microtime(true)-$t);
-//
-//$fn = Callback::parse(function ($v) { return $v; }, true);
-//$t = microtime(true);
-//for ($i = 0; $i < 1000; ++$i) {
-//  Functions::map($a, $fn);
-//}
-//var_dump($max=microtime(true)-$t);
-//
-//$fn = Callback::parse(function ($v) { return $v; }, false);
-//$t = microtime(true);
-//for ($i = 0; $i < 1000; ++$i) {
-//  Functions::map($a, $fn);
-//}
-//var_dump($max=microtime(true)-$t);
