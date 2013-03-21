@@ -135,6 +135,7 @@ function cfg($name, $wrap = null) {
 }
 
 function cfgGroup($group) {
+  $group .= ' ';
   return S::build(Core::$config, function ($value, $name) use ($group) {
     if (S::unprefix($name, $group)) { return array(trim($name) => $value); }
   });

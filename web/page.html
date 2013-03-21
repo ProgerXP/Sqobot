@@ -1,3 +1,4 @@
+<?php namespace Sqobot?>
 <!DOCTYPE html>
 <html>
   <head>
@@ -15,7 +16,7 @@
           <a href="<?php echo Homepage?>" target="_blank">Sqobot</a>
         </li>
         <?php
-          foreach (cfgGroup('menu') as $caption => $url) {
+          foreach (cfgGroup('webMenu') as $caption => $url) {
             echo HLEx::li(HLEx::a_q($caption, $url));
           }
         ?>

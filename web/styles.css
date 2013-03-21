@@ -1,7 +1,71 @@
 @import url(normalize.css);
 
-body { border-top: 5px solid navy; background: #f1f1f1; }
-z#wrapper { max-width: 700px; margin: 0 auto; }
+/***
+  Page layout
+ ***/
+
+a { text-decoration: none; color: #265d9b; }
+a:visited { color: navy; }
+a:hover { text-decoration: underline; }
+
+body {
+  border-top: 5px solid #265d9b;
+  font-family: "Trebuchet MS", sans-serif;
+  background: no-repeat center 5px url("data:image/gif;base64,R0lGODlh8gMHAIAAACZdm////yH5BAEAAAEALAAAAADyAwcAAAJvhB2py+0Po5y02ouz3rz7D4biSJbmiabqyrbuC8fyHB1IcND6zvf+DwwKh8Si8YhMKlm5xW0JjUqn1Kr1is1qt1zQ09kNi8fksvmMTqvXtQeADY/L5/S6/Y6PvvP8vv8PGCg4SFhoeIiYqLjIuFYAADs=") #e4e4e4;
+}
+
+#wrapper {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+#menu, #content {
+  border-radius: 0 0 8px 8px;
+}
+
+#menu {
+  margin: 0;
+  text-align: center;
+  background: #265d9b;
+  padding-bottom: 5px;
+  position: relative;
+  z-index: 5;
+}
+
+#menu li {
+  display: inline;
+  list-style: none;
+}
+
+#menu li + li:before {
+  content: " • ";
+  color: white;
+}
+
+#menu:first-letter { color: white; }
+#menu li a { color: white; }
+#menu li.sqobot a { color: #bbdbff; }
+
+#content {
+  padding: 1.5em;
+  border: 1px solid #c0c0c0;
+  border-top: 0;
+  margin-top: -5px;
+  background: no-repeat center 200px url(bk.png) #f1f1f1;
+}
+
+#content > :first-child,
+#content > :first-child > :first-child,
+#content > :first-child > :first-child > :first-child
+  { margin-top: 0; }
+#content > :last-child,
+#content > :last-child > :last-child,
+#content > :last-child > :last-child > :last-child
+  { margin-bottom: 0; }
+
+/***
+  Common elements
+ ***/
 
 table { width: 100%; border-collapse: collapse; }
 
@@ -12,3 +76,20 @@ table.pivot td { width: 50%; }
 
 tr.btn { text-align: center; }
 tr.btn.right { text-align: right; }
+
+pre.gen {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid #c0c0c0;
+  border-radius: 5px;
+  padding: 0.75em 1em;
+  font-size: 83%;
+}
+
+h1, h2, h3, h4 { text-align: center; }
+h1, h2, h3 { font-weight: normal; text-shadow: 0.12em 0.12em 0.05em #ddd; }
+
+p.error {
+  border-left: 3px solid red;
+  padding: 0.5em 0.5em 0.5em 1em;
+  background: #ffe;
+}

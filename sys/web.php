@@ -30,7 +30,7 @@ class Web {
   //= true if all given tasks are available
   static function canRun($tasks) {
     is_array($tasks) or $tasks = explode(' ', $tasks);
-    return static::can(S($tasks, '"t-?"'));
+    return static::can(S($tasks, '"web?"'));
   }
 
   //* $perms array, str space-separated
@@ -109,7 +109,7 @@ class Web {
   }
 
   static function deny($log = '') {
-    $long and warn("Denied access to web interface $log");
+    $log and warn("Denied access to web interface $log");
     $code = static::codeBy(cfg('webDenyAs')) ?: 403;
 
     if ($code == 403 and $log) {
@@ -118,10 +118,14 @@ class Web {
       $log = null;
     }
 
-    static::sendStatus($code)->quit($code, $log);
+    static::quitAs($code, $log);
   }
 
   static function quit($code, $messages = array()) {
+    static::sendStatus($code)->quitAs($code, $messages);
+  }
+
+  static function quitAs($code, $messages = array()) {
     $messages = S((array) $messages, function ($msg) {
       return ("$msg" !== '' and $msg[0] !== '<') ? HLEx::p_q($msg) : $msg;
     });
@@ -161,7 +165,7 @@ class Web {
 
   //= bool
   static function https() {
-    return strcasecmp(S::pickFlat($_SERVER['HTTPS']), 'on') === 0;
+    return strcasecmp(S::pickFlat($_SERVER, 'HTTPS'), 'on') === 0;
   }
 
   static function cookie($name, $value = null) {
@@ -185,13 +189,14 @@ class Web {
   }
 
   static function run($task, &$title) {
-    $task = Task::make("web$task");
-    $output = $task->capture('', $_POST + $_GET);
+    $task = strtolower($task);
+    $obj = Task::make("web$task");
+    $output = $obj->capture('', $_POST + $_GET);
 
-    $title = $task->title;
+    $title = $obj->title;
     isset($title) and $output = HLEx::h2_q($title).$output;
 
-    return HLEx::div($output, "t-$task");
+    return HLEx::div($output, "web-$task");
   }
 
   static function taskFile($task) {
@@ -210,8 +215,9 @@ class Web {
     return !!Task::factory($task, false);
   }
 
-  static function wrap($content, $title = 'Sqobot Web') {
-    $mediaURL = S::lastPart($_SERVER['REQUEST_URI'], '/');
+  static function wrap($content, $title = null) {
+    $mediaURL = S::lastPart($_SERVER['REQUEST_URI'], '/').'/';
+    $title or $title = 'Sqobot Web';
 
     ob_start();
     include ROOT.'web/page.html';
