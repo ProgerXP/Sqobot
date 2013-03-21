@@ -1,0 +1,9 @@
+Order Allow,Deny
+Allow from all
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # pass auth data to PHP running in Fast/CGI modes.
+  RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+</IfModule>

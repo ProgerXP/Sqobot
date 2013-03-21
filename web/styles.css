@@ -1,0 +1,14 @@
+@import url(normalize.css);
+
+body { border-top: 5px solid navy; background: #f1f1f1; }
+z#wrapper { max-width: 700px; margin: 0 auto; }
+
+table { width: 100%; border-collapse: collapse; }
+
+table.col-2 th { vertical-align: top; }
+table.col-2 tr + tr * { border-top: 1px solid silver; }
+
+table.pivot td { width: 50%; }
+
+tr.btn { text-align: center; }
+tr.btn.right { text-align: right; }
