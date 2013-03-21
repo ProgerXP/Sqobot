@@ -61,6 +61,8 @@ class Core {
   static $cl;
   //= array of callable
   static $onFatal = array();
+  //= hash of array of callback
+  static $events = array();
 
   static function loadConfig($file) {
     if (is_file($file) and $data = file_get_contents($file)) {
@@ -132,6 +134,12 @@ function cfg($name, $wrap = null) {
   }
 }
 
+function cfgGroup($group) {
+  return S::build(Core::$config, function ($value, $name) use ($group) {
+    if (S::unprefix($name, $group)) { return array(trim($name) => $value); }
+  });
+}
+
 function remoteDelay($started = null, $delay = null) {
   isset($delay) or $delay = cfg('remoteDelay');
   $delay += mt_rand(0, $delay / 10);
@@ -162,9 +170,23 @@ function opt($name = null, $default = null) {
   }
 }
 
+function hook($event, $callback) {
+  Core::$events[$event][] = $callback;
+}
+
+function fire($event, $args = array()) {
+  if ($callbacks = &Core::$events[$event]) {
+    is_array($args) or $args = array($args);
+
+    foreach ($callbacks as $callback) {
+      $result = call_user_func_array($callback, $args);
+      if (isset($result)) { return $result; }
+    }
+  }
+}
+
 function log($msg, $level = 'info') {
-  if (strpos(cfg('log', ' $ '), " $level ") !== false and
-      $log = strftime( opt('log', cfg('logFile')) )) {
+  if (strpos(cfg('log', ' $ '), " $level ") !== false and $log = logFile()) {
     $msg = sprintf('$ %s [%s] [%s] %s', strtoupper($level), date('H:i:s d-m-Y'),
                    Core::$cl ? 'cli' : S::pickFlat($_REQUEST, 'REMOTE_ADDR'), $msg);
 
@@ -172,6 +194,10 @@ function log($msg, $level = 'info') {
     touch($log);
     file_put_contents($log, "$msg\n\n", FILE_APPEND);
   }
+}
+
+function logFile() {
+  return strftime( opt('log', cfg('logFile')) );
 }
 
 function warn($msg) {

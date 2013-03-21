@@ -3,17 +3,21 @@
 abstract class Task {
   public $name;
 
-  function start() { }
-  function end() { }
-  function before(&$task, array &$args = null) { }
-  function after($task, array $args = null, &$result) { }
+  //* $web null list both CLI and web tasks, bool
+  //= array of str 'atoms', 'queue', ... suitable for factory()
+  static function all($web = false) {
+    $standard = S(glob(ROOT.'task/*.php', GLOB_NOESCAPE), array('.basename', '.php'));
+    $user = S(glob(ROOT.'user/[Tt]ask*.php', GLOB_NOESCAPE),
+              array('|basename|substr', 4, -4));
+    $tasks = array_unique(S::down(array_merge($standard, $user)));
 
-  function __construct() {
-    $this->name = S::tryUnprefix(get_class($this), __CLASS__);
-  }
-
-  function do_(array $args = null) {
-    echo $this->name.' task has no default method.';
+    if ($web === null) {
+      return $tasks;
+    } else {
+      return S::build($tasks, function ($name) use ($web) {
+        if (($web ^ S::unprefix($name, 'web')) == 0) { return $name; }
+      });
+    }
   }
 
   static function make($task) {
@@ -31,8 +35,27 @@ abstract class Task {
     }
   }
 
+  function __construct() {
+    $this->name = S::tryUnprefix(get_class($this), __CLASS__);
+  }
+
+  function do_(array $args = null) {
+    return print $this->name.' task has no default method.';
+  }
+
+  function start() { }
+  function end() { }
+  function before(&$task, array &$args = null) { }
+  function after($task, array $args = null, &$result) { }
+
+  function capture($task, $args = array()) {
+    ob_start();
+    $this->call($task, $args);
+    return ob_get_clean();
+  }
+
   // Typically returns an integer - exit code.
-  function call($task, $args) {
+  function call($task, $args = array()) {
     $func = strtolower("do_$task");
     $id = get_class($this)."->$func";
 
@@ -51,5 +74,12 @@ abstract class Task {
 
     $this->after($task, $args, $result);
     return $result;
+  }
+
+  //= array of str '' (default), 'unpack', ... suitable for call()
+  function methods() {
+    return S::build(get_class_methods($this), function ($func) {
+      if (S::unprefix($func, 'do_')) { return $func; }
+    });
   }
 }

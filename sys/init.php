@@ -1,20 +1,8 @@
 <?php namespace Sqobot;
 
-/*
-  Global command-line options
-
-  --log=out/log-...log
-    Can be empty. Defaults to opt('log').
-
-  --config=main
-    Can be empty.
-
-  --chdir=__DIR__
-    Can be empty.
-*/
-
 define(__NAMESPACE__.'\\NS', __NAMESPACE__.'\\');
 defined(NS.'ROOT') or define(NS.'ROOT', dirname(__DIR__).'/');
+define(NS.'Homepage', 'https://github.com/ProgerXP/Sqobot');
 
 error_reporting(-1);
 ini_set('display_errors', true);
@@ -32,7 +20,7 @@ spl_autoload_register(function ($class) {
     return;
   }
 
-  if (substr($class, 0, 7) === NS) {
+  if (substr($class, 0, strlen(NS)) === NS) {
     $short = substr($class, 7);
     $lower = strtolower($short);
 
@@ -53,16 +41,33 @@ spl_autoload_register(function ($class) {
   }
 
   if ($path = cfg("class $class")) {
-    $path[0] === '$' and $path = ROOT.'lib/'.substr($path, 1);
-    array_unshift($files, $path);
+    if (substr($path, -4) === '.php') {
+      $path[0] === '$' and $path = ROOT.'lib/'.substr($path, 1);
+      array_unshift($files, $path);
+    } else {
+      return class_alias($path, $class);
+    }
   }
 
   foreach ($files as $file) {
-    if (is_file($file)) { return include_once $file; }
+    if (is_file($file)) {
+      include_once $file;
+      return class_exists($class, false) and fire("class $class", $file);
+    }
   }
 
   warn("Cannot autoload class [$class] from either of these paths:".
        join("\n  ", S::prepend($files, '')));
+});
+
+hook('class MiMeil', function () {
+  MiMeil::$onEvent = function ($event, $args) {
+    return fire("mail $event", $args);
+  };
+
+  MiMeil::RegisterEventsUsing(function ($event, $callback) {
+    hook("mail $event", $callback);
+  });
 });
 
 register_shutdown_function(function () {
@@ -104,6 +109,7 @@ if (defined('STDIN') and isset($argv)) {
 }
 
 $chdir = opt('chdir', ROOT) and chdir($chdir);
+$delay = opt('delay') and usleep(1000 * ($delay + $delay / 3));
 
 Core::loadConfig('default.conf');
 Core::loadConfig(opt('config', 'main').'.conf');
