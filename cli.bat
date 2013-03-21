@@ -1,1 +1,1 @@
-@php cli.php -- %*
+@php -d memory_limit=512M cli.php -- %*

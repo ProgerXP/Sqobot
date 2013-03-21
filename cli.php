@@ -1,5 +1,4 @@
-<?php
-namespace Sqobot;
+<?php namespace Sqobot;
 
 require_once is_file(__DIR__.'/init.php') ? __DIR__.'/init.php' : __DIR__.'/sys/init.php';
 
@@ -17,6 +16,11 @@ if ("$task" === '' or ($task === 'help' and "$func" === '')) {
        PHP_EOL,
        'Global options:', PHP_EOL,
        PHP_EOL,
+       '  --log=opt(log)', PHP_EOL,
+       '  --config=main', PHP_EOL,
+       '  --chdir=.', PHP_EOL,
+       '  --cfg[option]=value', PHP_EOL,
+       '  --delay=sec+33%', PHP_EOL,
        '  --silent[=1]', PHP_EOL;
   exit(-1);
 } elseif ($task === 'help') {
