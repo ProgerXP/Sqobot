@@ -10,7 +10,7 @@ class TaskWebnodes extends Task {
     });
 
     if ($rows) {
-      echo HLEx::table(join(S($rows, '"<tr>?</tr>"')), 'gen nodes');
+      echo HLEx::table(join(S($rows, '"<tr>?</tr>"')), 'nodes');
     } else {
       echo HLEx::p('No configured nodes.', 'none');
     }

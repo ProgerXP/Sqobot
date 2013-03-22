@@ -108,9 +108,15 @@ class Core {
 
     return $result;
   }
+
+  static function cli() {
+    return defined('STDIN') or !empty($_SERVER['TERM']);
+  }
 }
 
 function dd() {
+  if (!Core::cli() and !extension_loaded('xdebug')) { echo '<pre>'; }
+
   func_num_args() or print str_repeat('-', 79).PHP_EOL;
   foreach (func_get_args() as $arg) { var_dump($arg); }
   echo PHP_EOL, PHP_EOL;

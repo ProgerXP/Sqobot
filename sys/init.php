@@ -102,7 +102,7 @@ onFatal(function ($e) {
 
 Core::loadConfig(ROOT.'default.conf');
 
-if (defined('STDIN') and isset($argv)) {
+if (Core::cli() and isset($argv)) {
   array_shift($argv);   // script.php
   reset($argv) === '--' and array_shift($argv);
   Core::$cl = S::parseCL($argv, true);

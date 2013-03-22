@@ -126,6 +126,9 @@ class Web {
   }
 
   static function quitAs($code, $messages = array()) {
+    // might be called from within a task handler - clear its output.
+    while (ob_get_level()) { ob_end_clean(); }
+
     $messages = S((array) $messages, function ($msg) {
       return ("$msg" !== '' and $msg[0] !== '<') ? HLEx::p_q($msg) : $msg;
     });
