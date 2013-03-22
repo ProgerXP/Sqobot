@@ -4,10 +4,10 @@ class TaskWebtasks extends Task {
   public $title = 'Task shell';
 
   function do_(array $args = null) {?>
-    <table "task-launcher pivot">
+    <table class="task-launcher">
       <tr>
         <td>
-          <table class="col-2">
+          <table class="gen col-2">
             <tr>
               <th>Task:</th>
               <td>
@@ -21,7 +21,8 @@ class TaskWebtasks extends Task {
                       unset($methods['']);
                     }
 
-                    return array($task, array_values($methods));
+                    asort($methods);
+                    return array($task, array_flip($methods));
                   });
 
                   echo HLEx::select('method', $methods, null);
@@ -30,14 +31,16 @@ class TaskWebtasks extends Task {
             </tr>
             <tr>
               <th>Parameters:</th>
-              <td>
-                <input name="args" placeholder="arg#1 &quot;arg 2&quot; ...">
+              <td class="args">
+                <input placeholder="arg 1">
+                <input placeholder="arg 2">
+                <input placeholder="arg 3">
               </td>
             </tr>
             <tr>
               <th>Options:</th>
               <td>
-                <textarea name="options" rows="5" cols="40"
+                <textarea class="wide" name="options" rows="5" cols="40"
                           placeholder="-flags --option[=value]"></textarea>
               </td>
             </tr>
@@ -48,7 +51,7 @@ class TaskWebtasks extends Task {
             </tr>
           </table>
         </td>
-        <td>
+        <td class="hide">
           <pre class="output"></pre>
         </td>
       </tr>

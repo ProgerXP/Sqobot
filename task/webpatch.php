@@ -1,6 +1,6 @@
 <?php namespace Sqobot;
 
-class TaskWebqueue extends Task {
+class TaskWebpatch extends Task {
   public $title = 'Patching';
 
   function do_(array $args = null) {
@@ -8,15 +8,19 @@ class TaskWebqueue extends Task {
       empty($args['nodes']) and $this->patch($patch['tmp_name'], $patch['name']);
       empty($args['self']) and $this->patchNodes($patch['tmp_name'], $patch['name']);
       return;
-    }
+    }?>
 
-    echo '<form action="?task=patch" method="post" enctype="multipart/form-data"><p>';
+    <form action="?task=patch" method="post" enctype="multipart/form-data">
+      <p>
+        <b>Patch with (ZIP or single file):</b>
+        <input type="file" name="patch">
+      </p>
 
-    echo HLEx::b('Patch with (ZIP or single file):').
-         '<input type="file" name="patch">';
+  <?php
+    echo '<p>';
 
-    if (Nodes\::has()) {
-      echo HLEx::<button_q('Patch self & nodes').
+    if (Node::all()) {
+      echo HLEx::button_q('Patch self & nodes'),
            HLEx::button('Only self', array('name' => 'self')),
            HLEx::button('Only nodes', array('name' => 'nodes'));
     } else {
@@ -60,7 +64,7 @@ class TaskWebqueue extends Task {
       try {
         echo $node->call('patch')
           ->upload('patch', $name, fopen($local, 'rb'))
-          ->docBody();
+          ->fetchData();
       } catch (\Exception $e) {
         echo HLEx::p('Error sending request: '.HLEx::kbd_q($msg = exLine($e)).'.');
         error("Cannot contact node {$node->id()} to patch: $msg.");

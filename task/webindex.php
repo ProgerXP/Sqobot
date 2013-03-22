@@ -14,7 +14,7 @@ class TaskWebindex extends Task {
         array_splice($toAdd, 0, 0, $rest);
       } elseif ($task !== 'index' and Web::canRun($task)) {
         try {
-          $tasks[$task] = Web::run($task, $title);
+          $tasks[$task] = Web::runTitled($task, $title);
         } catch (\Exception $e) {
           $tasks[$task] =
             "<p class=\"task error\">Problem running task ".HLEx::b_q($task).": ".
