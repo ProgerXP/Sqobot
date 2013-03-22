@@ -46,7 +46,7 @@ class TaskWebtasks extends Task {
                     echo HLEx::select('to_call', $tasks, $selected);
                   ?>
 
-                  <input type="submit" name="help" value="Help">
+                  <button type="submit" name="help" value="1">Help</button>
                 </td>
               </tr>
               <tr>
@@ -66,7 +66,7 @@ class TaskWebtasks extends Task {
               </tr>
               <tr class="btn right">
                 <td colspan="2">
-                  <input type="submit" name="exec" value="Execute">
+                  <button type="submit" name="exec" value="1">Execute</button>
                   <button type="submit" name="exec" value="full">Full-screen</button>
                 </td>
               </tr>

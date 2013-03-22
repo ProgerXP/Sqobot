@@ -90,6 +90,8 @@ body:after { bottom: -3px; height: 3px; }
   Common elements
  ***/
 
+textarea:focus, input:focus { outline: 2px solid #265D9B; outline-offset: -1px; }
+
 textarea, input, select, button {
   -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
@@ -107,7 +109,6 @@ tr {
 table.gen th:first-child {
   width: 20%;
   background: rgba(255, 255, 255, 0.7);
-  border-right: 3px solid #265d9b;
   padding-right: 1em;
 }
 table.gen th + td { padding-left: 1em; }
@@ -187,5 +188,8 @@ span.error {
 /*** tasks ***/
 .web-tasks > table:not(.pivot) td.output { display: none; }
 .web-tasks > table:not(.pivot) tr.btn { text-align: center; }
-.web-tasks td.output p { margin: 0; }
-.web-tasks td.output p + pre { margin-top: 0.5em; }
+.web-tasks td.output > :first-child { margin-top: 0.25em; }
+.web-tasks td.output p + pre { margin-top: -0.5em; }
+
+/*** others ***/
+.web-patch { text-align: center; }

@@ -21,8 +21,8 @@ class TaskWebpatch extends Task {
     echo '<p>';
 
     if (Node::all()) {
-      echo HLEx::button_q('Patch self & nodes'),
-           HLEx::button('Only self', array('name' => 'self', 'value' => 1)),
+      echo HLEx::button_q('Patch self & nodes'), ' ',
+           HLEx::button('Only self', array('name' => 'self', 'value' => 1)), ' ',
            HLEx::button('Only nodes', array('name' => 'nodes', 'value' => 1));
     } else {
       echo HLEx::button('Patch');
