@@ -88,7 +88,7 @@ class Downwind {
   function url($new = null) {
     if ($new) {
       if (!filter_var($new, FILTER_VALIDATE_URL)) {
-        throw new EWrongURL("[$new] doesn't look like a valid URL.");
+        throw new InvalidArgumentException("[$new] doesn't look like a valid URL.");
       }
 
       $this->url = $new;
@@ -102,7 +102,8 @@ class Downwind {
     return parse_url($this->url, $part);
   }
 
-  function addQuery(array $vars) {
+  function addQuery($vars) {
+    is_array($vars) or $vars = array($vars => 1);
     return $this->query($vars + $this->query());
   }
 
@@ -149,7 +150,7 @@ class Downwind {
   function open() {
     $f = $this->handle = fopen($this->url, 'rb', false, $this->createContext());
     if (!$f) {
-      throw new EDownload("Cannot fopen({$this->url}).");
+      throw new RuntimeException("Cannot fopen({$this->url}).");
     }
 
     $this->responseHeaders = (array) stream_get_meta_data($f);
@@ -162,7 +163,7 @@ class Downwind {
 
     $this->reply = stream_get_contents($this->open()->handle, $limit, $offset);
     if (!is_string($this->reply)) {
-      throw new EDownload("Cannot get remote stream contents of [{$this->url}].");
+      throw new RuntimeException("Cannot get remote stream contents of [{$this->url}].");
     }
 
     return $this;

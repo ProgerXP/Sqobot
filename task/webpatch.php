@@ -10,9 +10,10 @@ class TaskWebpatch extends Task {
       return;
     }?>
 
-    <form action="?task=patch" method="post" enctype="multipart/form-data">
+    <form action="." method="post" enctype="multipart/form-data">
       <p>
-        <b>Patch with (ZIP or single file):</b>
+        <input type="hidden" name="task" value="patch">
+        <b>Patch with</b> (ZIP or single file):
         <input type="file" name="patch">
       </p>
 
@@ -21,8 +22,8 @@ class TaskWebpatch extends Task {
 
     if (Node::all()) {
       echo HLEx::button_q('Patch self & nodes'),
-           HLEx::button('Only self', array('name' => 'self')),
-           HLEx::button('Only nodes', array('name' => 'nodes'));
+           HLEx::button('Only self', array('name' => 'self', 'value' => 1)),
+           HLEx::button('Only nodes', array('name' => 'nodes', 'value' => 1));
     } else {
       echo HLEx::button('Patch');
     }
@@ -47,9 +48,9 @@ class TaskWebpatch extends Task {
       $zip = new \ZipArchive;
 
       if (($error = $zip->open($local)) !== true) {
-        Web::quit(500, "Cannot open file as a ZIP archive, ZipArchive error #$error.");
+        Web::quit(500, "Cannot open archive, ZipArchive error #$error.");
       } elseif (!$zip->extractTo('.')) {
-        Web::quit(500, "Cannot extract ZIP archive to ".HLEx::kbd_q(getcwd()).".");
+        Web::quit(500, "<p>Cannot extract archive to ".HLEx::kbd_q(getcwd()).".</p>");
       }
 
       $zip->close();
@@ -63,6 +64,7 @@ class TaskWebpatch extends Task {
 
       try {
         echo $node->call('patch')
+          ->addQuery('self')
           ->upload('patch', $name, fopen($local, 'rb'))
           ->fetchData();
       } catch (\Exception $e) {

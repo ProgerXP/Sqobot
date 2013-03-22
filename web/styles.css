@@ -120,7 +120,7 @@ textarea.wide, input.wide { width: 100%; }
 textarea.wide { resize: vertical; }
 
 pre { font-size: 83%; }
-textarea, input, select, button { font-size: 93%; }
+kbd, code, textarea, input, select, button { font-size: 93%; }
 optgroup { font-style: normal; }
 option { padding-right: 0.5em; }
 option[value$="-"] { font-style: italic; }

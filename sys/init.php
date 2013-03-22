@@ -6,6 +6,7 @@ define(NS.'Homepage', 'https://github.com/ProgerXP/Sqobot');
 
 error_reporting(-1);
 ini_set('display_errors', true);
+ini_set('html_errors', false);    // we escape messages on our own when necessary.
 function_exists('mb_internal_encoding') and mb_internal_encoding('utf-8');
 ignore_user_abort(true);
 set_time_limit(24 * 3600);
