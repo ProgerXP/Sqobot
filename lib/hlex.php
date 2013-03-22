@@ -108,7 +108,7 @@ class HLEx {
     return $url ? '_blank' : null;
   }
 
-  // Indicates if $url is an external URL - i.e. containing schema and its domain
+  // Indicates if $url is an external URL - i.e. containing scheme and its domain
   // not matching current domain.
   //= bool
   static function isExternal($url) {

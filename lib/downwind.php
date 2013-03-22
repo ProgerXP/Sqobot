@@ -23,6 +23,12 @@ class Downwind {
   public $responseHeaders;
   public $reply;
 
+  static function queryStr(array $query, $noQuestionMark = false) {
+    $query = http_build_query($query, '', '&');
+    if (!$noQuestionMark and "$query" !== '') { $query = "?$query"; }
+    return $query;
+  }
+
   static function randomAgent() {
     return static::$agents ? static::$agents[ array_rand(static::$agents) ] : '';
   }
