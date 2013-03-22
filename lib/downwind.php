@@ -1,10 +1,19 @@
-<?php namespace Sqobot;
+<?php
+/*
+  Downwind - stream context wrapper for flexible up- & download.
+  in public domain | by Proger_XP | http://proger.i-forge.net/PHP_Downwind
 
-class Download {
+  Standalone unless you're doing multipart/form-data upload() - in this case
+  http://proger.i-forge.net/MiMeil class is necessary (see encodeMultipartData()).
+  Note that you'll need to not only require() it but also set up as described there.
+*/
+
+class Downwind {
+  //= array of str
   static $agents;
   static $maxFetchSize = 20971520;      // 20 MiB
 
-  public $contextOptions;
+  public $contextOptions = array();
   public $url;
   public $headers;
   //= str URL-encoded data, array upload data (handles and/or strings)
@@ -14,24 +23,8 @@ class Download {
   public $responseHeaders;
   public $reply;
 
-  static function agents() {
-    if (!isset(static::$agents)) {
-      if (is_file($file = 'agents.txt')) {
-        $list = file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-        static::$agents = array_filter(S::trim($list));
-      } else {
-        log("No User-Agents file $file - use it for better cloaking.");
-        static::$agents = array();
-      }
-    }
-
-    return (array) static::$agents;
-  }
-
   static function randomAgent() {
-    if ($all = static::agents()) {
-      return $all[ array_rand($all) ];
-    }
+    return static::$agents ? static::$agents[ array_rand(static::$agents) ] : '';
   }
 
   static function makeQuotientHeader($items, $append = null) {
@@ -60,16 +53,10 @@ class Download {
   }
 
   function __construct($url, $headers = array()) {
-    $this->contextOptions = array(
-      'follow_location'   => cfg('dlRedirects') > 0,
-      'max_redirects'     => max(0, (int) cfg('dlRedirects')),
-      'protocol_version'  => cfg('dlProtocol'),
-      'timeout'           => (float) cfg('dlTimeout'),
-      'ignore_errors'     => !!cfg('dlFetchOnError'),
-    );
-
     $this->url($url);
-    $this->headers = S::downKeys(S::arrize($headers, 'referer'));
+
+    is_array($headers) or $headers = array('referer' => $headers);
+    $this->headers = array_change_key_case($headers);
   }
 
   function __destruct() {
@@ -92,10 +79,8 @@ class Download {
     return $this;
   }
 
-  function url($new = null, $aliased = true) {
+  function url($new = null) {
     if ($new) {
-      $aliased and $new = realURL($new);
-
       if (!filter_var($new, FILTER_VALIDATE_URL)) {
         throw new EWrongURL("[$new] doesn't look like a valid URL.");
       }
@@ -107,13 +92,38 @@ class Download {
     }
   }
 
-  function method($new = null) {
-    return S::access(func_num_args(), $new, $this, $this->contextOptions['method']);
+  function urlPart($part) {
+    return parse_url($this->url, $part);
   }
 
-  function post($data, $method = 'post') {
+  function addQuery(array $vars) {
+    return $this->query($vars + $this->query());
+  }
+
+  function query(array $vars = null) {
+    if (func_num_args()) {
+      $this->url = strtok($this->url, '?').static::queryStr($vars);
+      return $this;
+    } else {
+      strtok($this->url, '?');
+      parse_str(strtok(null), $vars);
+      return $vars;
+    }
+  }
+
+  //= str method in upper case
+  function method($new = null) {
+    if (func_num_args()) {
+      $this->contextOptions['method'] = strtoupper($new);
+      return $this;
+    } else {
+      return $this->contextOptions['method'];
+    }
+  }
+
+  function post(array $data, $method = 'post') {
     $this->method($method)->freeData();
-    $this->data = urlencode($data);
+    $this->data = static::queryStr($data, true);
     return $this;
   }
 
@@ -170,7 +180,7 @@ class Download {
   //= str HTML within <body> or entire response if no such tag
   function docBody() {
     $reply = $this->fetchData();
-    preg_match('~<body>(.*)</body>~ui', $reply, $match) and $reply = $match[1];
+    preg_match('~<body>(.*)</body>~uis', $reply, $match) and $reply = $match[1];
     return trim($reply);
   }
 
@@ -196,9 +206,10 @@ class Download {
     return array('header' => $this->normalizeHeaders()) + $options;
   }
 
-  function encodeMultipartData() {
+  protected function encodeMultipartData() {
     $data = &$this->data;
-    $mail = new \MiMeil('', '');
+    $mail = new MiMeil('', '');
+    $mail->SetDefaultsTo($mail);
 
     foreach ($data as $var => &$file) {
       if (is_resource($h = $file['data'])) {
@@ -208,9 +219,10 @@ class Download {
       }
 
       $name = $file['name'];
+      $ext = ltrim(strrchr($name, '.'), '.');
 
       $file['headers'] = array(
-        'Content-Type' => $mail->MimeByExt(S::ext($name, 'application/octet-stream')),
+        'Content-Type' => $mail->MimeByExt($ext, 'application/octet-stream'),
         'Content-Disposition' => 'form-data; name="'.$var.'"; filename="'.$name.'"',
       );
     }
@@ -231,39 +243,43 @@ class Download {
       }
     }
 
-    return S::build($this->headers, function ($value, $header) {
+    $result = array();
+
+    foreach ($this->headers as $header => $value) {
       if (!is_int($header)) {
         $header = preg_replace('~(^|-).~e', 'strtoupper("\\0")', strtolower($header));
       }
 
       if (is_array($value)) {
         if (!is_int($header)) {
-          $value = S::prefix($value, "$header: ");
+          foreach ($value as &$s) { $s = "$header: "; }
         }
 
-        return array_values($value);
+        $result = array_merge($result, array_values($value));
       } elseif (is_int($header)) {
-        return array($value);
+        $result[] = $value;
       } elseif (($value = trim($value)) !== '') {
-        return array("$header: $value");
+        $result[] = "$header: $value";
       }
-    });
+    }
+
+    return $result;
   }
 
   function has($header) {
     return isset($this->headers[$header]);
   }
 
-  function header_accept_language() {
-    return static::makeQuotientHeader(cfg('dl languages'));
+  function header_accept_language($str = '') {
+    return $str ? static::makeQuotientHeader($str) : '';
   }
 
-  function header_accept_charset() {
-    return static::makeQuotientHeader(cfg('dl charsets'), '*');
+  function header_accept_charset($str = '') {
+    return $str ? static::makeQuotientHeader($str, '*') : '';
   }
 
-  function header_accept() {
-    return static::makeQuotientHeader(cfg('dl mimes'), '*/*');
+  function header_accept($str = '') {
+    return $str ? static::makeQuotientHeader($str, '*/*') : '';
   }
 
   function header_user_agent() {
@@ -275,6 +291,6 @@ class Download {
   }
 
   function header_referer() {
-    return 'http://'.$this->header_host().'/';
+    return 'http://'.$this->urlPart(PHP_URL_HOST).'/';
   }
 }
