@@ -50,7 +50,7 @@ class Web {
   }
 
   static function isSuper() {
-    return static::perms() == '*';
+    return static::perms() === '*';
   }
 
   // Returns both default user perms and this user's if he's authorized.
@@ -141,6 +141,11 @@ class Web {
     exit($code);
   }
 
+  //= bool
+  static function https() {
+    return strcasecmp(S::pickFlat($_SERVER, 'HTTPS'), 'on') === 0;
+  }
+
   // Read input variable.
   static function get($var, $default = null) {
     return S::pickFlat($_POST, $var, function () use ($var, $default) {
@@ -163,11 +168,6 @@ class Web {
     }
   }
 
-  //= bool
-  static function https() {
-    return strcasecmp(S::pickFlat($_SERVER, 'HTTPS'), 'on') === 0;
-  }
-
   static function cookie($name, $value = null) {
     if (func_num_args() < 2) {
       return S::pickFlat($_COOKIE, cfg('cookiePrefix').$name);
@@ -188,15 +188,26 @@ class Web {
     return Task::all(true);
   }
 
-  static function run($task, &$title) {
-    $task = strtolower($task);
+  static function runNaked($task, &$title) {
+    list($task, $method) = explode('-', strtolower("$task-"));
     $obj = Task::make("web$task");
-    $output = $obj->capture('', $_POST + $_GET);
-
+    $output = $obj->capture($method, $_POST + $_GET);
     $title = $obj->title;
-    isset($title) and $output = HLEx::h2_q($title).$output;
+    return $output;
+  }
+
+  static function run($task, &$title, $prependTitle = false) {
+    $output = static::runNaked($task, $title);
+
+    if ($prependTitle and is_scalar($title)) {
+      $output = HLEx::h2_q($title).$output;
+    }
 
     return HLEx::div($output, "web-$task");
+  }
+
+  static function runTitled($task, &$title) {
+    return static::run($task, $title, true);
   }
 
   static function taskFile($task) {

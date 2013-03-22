@@ -62,22 +62,32 @@ class Node {
 
   function url() {
     $url = $this->url;
-    $this->urlPart(PHP_URL_SCHEMA) or $url = "http://$url";
+    $this->urlPart(PHP_URL_SCHEME) or $url = "http://$url";
     return $url;
   }
 
   function status($short = true) {
-    return $this->call('status', compact('short'))->docBody();
+    return $this->call('status', compact('short'))->fetchData();
   }
 
   function call($task, array $post = array()) {
-    $call = NodeCall::make($this->url().'?task='.urlencode($task))->post($post);
+    $call = NodeCall::make($this->url())
+      ->addQuery(array('task' => $task, 'naked' => 1))
+      ->post($post);
+
     $call->node = $this;
     $this->user and $call->basicAuth($this->user, $this->password);
+
     return $call;
   }
 }
 
 class NodeCall extends Download {
   public $node;   //= Node
+
+  function headerlessBody() {
+    $body = $this->docBody();
+    $less = preg_replace('~<h2>.*?</h2>~uis', '', $body, 1);
+    return preg_last_error() ? $body : $less;
+  }
 }

@@ -61,11 +61,11 @@ spl_autoload_register(function ($class) {
 });
 
 hook('class MiMeil', function () {
-  MiMeil::$onEvent = function ($event, $args) {
+  \MiMeil::$onEvent = function ($event, $args) {
     return fire("mail $event", $args);
   };
 
-  MiMeil::RegisterEventsUsing(function ($event, $callback) {
+  \MiMeil::RegisterEventsUsing(function ($event, $callback) {
     hook("mail $event", $callback);
   });
 });
