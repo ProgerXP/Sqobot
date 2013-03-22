@@ -19,7 +19,12 @@ Web::canRun($task) or Web::deny($task == 'index' ? 'index page.' : "task $task."
 
 try {
   Web::sendType('text/html');
-  echo Web::wrap(Web::run($task, $title), $title);
+
+  if (Web::is('naked')) {
+    echo Web::runNaked($task, $title);
+  } else {
+    echo Web::wrap(Web::runTitled($task, $title), $title);
+  }
 } catch (ENoTask $e) {
   Web::quit(404, $e->getMessage());
 } catch (\Exception $e) {
