@@ -15,11 +15,8 @@ class TaskWeblog extends Task {
     $current = logFile();
 
     if ($query = &$args['file']) {
-      $current = realpath(dirname($current)."/$query");
-      if (!$current) {
-        $current = $query;
-        $entries = array();
-      }
+      strpbrk($query, '\\/') === false or Web::deny();
+      $current = dirname($current)."/$query";
     }
 
     if (is_file($current)) {
@@ -29,10 +26,15 @@ class TaskWeblog extends Task {
       $entries = array();
     }
 
+    $max = S::pickFlat($args, 'max', $query ? count($entries) : 20);
+
     if ($entries) {
-      $entries = array_reverse(array_slice($entries, -20));
+      $allShown = count($entries) <= $max;
+      $entries = array_reverse(array_slice($entries, -$max));
       $entries = S($entries, array(__CLASS__, 'formatEntry'));
-      echo HLEx::div(join(S($entries, NS.'HLEx.pre')), 'entries');
+
+      $allShown and $allShown = HLEx::p('EOF', 'eof');
+      echo HLEx::div(join(S($entries, NS.'HLEx.pre')).$allShown, 'entries');
     } else {
       echo HLEx::p('Log file '.HLEx::kbd_q($current).' is empty.', 'none');
     }
