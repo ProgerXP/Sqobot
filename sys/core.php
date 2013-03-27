@@ -6,6 +6,11 @@ use PDO;
 class Error extends Exception {
   public $object;
 
+  static function initial(Exception $e) {
+    while ($previous = $e->getPrevious()) { $e = $previous; }
+    return $e;
+  }
+
   static function re(Exception $previous, $append = '') {
     throw static::wrap($previous, $append);
   }
@@ -229,6 +234,7 @@ function error($msg) {
 }
 
 function exLine(Exception $e) {
+  $e = Error::initial($e);
   return sprintf('%s (in %s:%d)', $e->getMessage(), $e->getFile(), $e->getLine());
 }
 
@@ -259,7 +265,7 @@ function dbImport($sqls) {
 
     try {
       $sql and $sum += db()->exec($sql);
-    } catch (\Exception $e) {
+    } catch (Exception $e) {
       $e = EDbImport::wrap($e, "Error running $sql.");
       $e->sql = $sql;
       $e->affected = $sum;
@@ -280,7 +286,7 @@ function atomic($func) {
       $result = call_user_func($func);
       $atomate and Atoms::commit();
       return $result;
-    } catch (\Exception $e) {
+    } catch (Exception $e) {
       $atomate and Atoms::rollback();
       throw $e;
     }

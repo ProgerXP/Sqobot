@@ -23,6 +23,11 @@ class Downwind {
   public $responseHeaders;
   public $reply;
 
+  static function mimeByExt($ext) {
+    $mail = new MiMeil('', '');
+    return $mail->MimeByExt($ext, 'application/octet-stream');
+  }
+
   static function queryStr(array $query, $noQuestionMark = false) {
     $query = http_build_query($query, '', '&');
     if (!$noQuestionMark and "$query" !== '') { $query = "?$query"; }
@@ -215,8 +220,6 @@ class Downwind {
 
   protected function encodeMultipartData() {
     $data = &$this->data;
-    $mail = new MiMeil('', '');
-    $mail->SetDefaultsTo($mail);
 
     foreach ($data as $var => &$file) {
       if (is_resource($h = $file['data'])) {
@@ -229,12 +232,14 @@ class Downwind {
       $ext = ltrim(strrchr($name, '.'), '.');
 
       $file['headers'] = array(
-        'Content-Type' => $mail->MimeByExt($ext, 'application/octet-stream'),
+        'Content-Type' => static::mimeByExt($ext),
         'Content-Disposition' => 'form-data; name="'.$var.'"; filename="'.$name.'"',
       );
     }
 
     // join all data strings into one string using generated MIME boundary.
+    $mail = new MiMeil('', '');
+    $mail->SetDefaultsTo($mail);
     $data = $mail->BuildAttachments($data, $this->headers, 'multipart/form-data');
   }
 

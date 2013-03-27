@@ -28,6 +28,8 @@ try {
 } catch (ENoTask $e) {
   Web::quit(404, $e->getMessage());
 } catch (\Exception $e) {
+  $e = Error::initial($e);
+
   if (Web::is('naked')) {
     // this is likely a remote AJAX request and user won't see the message.
     error("Problem running task [$task]: ".$e->getMessage());

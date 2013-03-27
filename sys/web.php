@@ -84,7 +84,7 @@ class Web {
   static function codeBy($code) {
     if (!is_numeric($code)) {
       $code = strtolower($code);
-      $code = S::pickFlat(statuc::$statusAliases, $code);
+      $code = S::pickFlat(static::$statusAliases, $code);
     }
 
     if (!$code) {
@@ -236,5 +236,11 @@ class Web {
     ob_start();
     include ROOT.'web/page.html';
     return ob_get_clean();
+  }
+
+  static function redirect($url, $code = 'temp') {
+    header('Location: '.$url);
+    $link = HLEx::a_q('this page', $url);
+    static::quit($code, HLEx::p("Please navigate to $link."));
   }
 }

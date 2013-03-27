@@ -35,7 +35,7 @@ class TaskWebpatch extends Task {
       </p>
 
   <?php
-    echo '<p>';
+    echo '<p class="btn">';
 
     if (Node::all()) {
       echo HLEx::button_q('Patch self & nodes'), ' ',
@@ -167,7 +167,7 @@ class TaskWebpatch extends Task {
         echo $req->fetchData();
       } catch (\Exception $e) {
         echo HLEx::p('Error sending request: '.HLEx::kbd_q($msg = exLine($e)).'.');
-        error("Cannot contact node {$node->id()} to patch: $msg.");
+        error("Error contacting node {$node->id()} to patch: $msg.");
       }
     }
   }
