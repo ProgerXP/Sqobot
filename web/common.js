@@ -3,6 +3,7 @@ _.mixin(_.str.exports())
 
 $ && $(function () {
   hookTasks()
+  hookFiles()
 })
 
 function hookTasks() {
@@ -54,6 +55,36 @@ function hookTasks() {
         .empty()
         .append('<p class=loading>Loading...</p>')
         .load(url, form.serialize())
+
+      return false
+    }
+  })
+}
+
+function hookFiles() {
+  $(document).on('click', '.web-files a.name, .web-files a.delete', function () {
+    var a = $(this)
+
+    if (a.is('.confirm')) {
+      var row = a.parents('tr:first')
+      var info = $.trim( row.find('td.name').text() )
+
+      row.addClass('confirming')
+      var cancel = !confirm('Really do this?\n\n' + info)
+      row.removeClass('confirming')
+
+      if (cancel) { return false }
+    }
+
+    if (a.is('.delete') || a.parents('p, tr.dir').length) {
+      var old = a.parents('.web-files').find('h2').nextAll()
+
+      $('<div>')
+        .append('<p class=loading>Loading...</p>')
+        .insertBefore(old[0])
+        .load(a.attr('href') + '&naked=1', function () {
+          old.remove()
+        })
 
       return false
     }
