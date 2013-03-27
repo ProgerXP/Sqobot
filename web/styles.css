@@ -120,6 +120,7 @@ table.pivot { table-layout: fixed; }
 textarea.wide, input.wide { width: 100%; }
 textarea.wide { resize: vertical; }
 
+hr { border: 0; border-top: 1px solid #c0c0c0; margin-left: -1.5em; margin-right: -1.5em; }
 pre { font-size: 83%; }
 kbd, code, textarea, input, select, button { font-size: 93%; }
 optgroup { font-style: normal; }
@@ -139,7 +140,13 @@ h1, h2, h3 { font-weight: normal; text-shadow: 0.12em 0.12em 0.05em #ddd; }
 p.error {
   border-left: 3px solid red;
   padding: 0.5em 0.5em 0.5em 1em;
-  background: #ffe;
+  background: none repeat scroll 0 0 rgba(255, 255, 234, 0.83);
+}
+
+p.error.border {
+  border-top: 1px solid #CCC588;
+  border-bottom: 1px solid #CCC588;
+  border-right: 1px solid #CCC588;
 }
 
 p.none {
@@ -159,6 +166,10 @@ span.error {
 /***
   Task styles
  ***/
+
+/*** status ***/
+.web-status .atoms { float: right; margin-right: 1em; }
+.web-status pre:first-line { font-weight: bold; }
 
 /*** log ***/
 .web-index .web-log .entries { overflow: auto; max-height: 40em; }
@@ -191,5 +202,19 @@ span.error {
 .web-tasks td.output > :first-child { margin-top: 0.25em; }
 .web-tasks td.output p + pre { margin-top: -0.5em; }
 
+/*** patch ***/
+.web-patch form { text-align: center; }
+.web-patch ol { padding-left: 1.4em; }
+.web-patch ol kbd { font-weight: bold; }
+.web-patch li.errors kbd { color: red; }
+.web-patch .error + pre {
+  margin: -1.2em 0 0;
+  border-radius: 0 0 5px 5px;
+   border-top-color: #CCC588;
+}
+
+/*** nodes ***/
+.web-nodes .nodes th { white-space: nowrap; padding-right: 1em; }
+.web-nodes .nodes .errors { color: maroon; }
+
 /*** others ***/
-.web-patch { text-align: center; }

@@ -1,7 +1,7 @@
 <?php namespace Sqobot;
 
 class TaskWeblog extends Task {
-  public $title = 'Log viewer';
+  public $title = 'Log Viewer';
 
   static function formatEntry($msg) {
     $replaces = array('[' => '[<kbd>', ']' => '</kbd>]');
@@ -29,12 +29,14 @@ class TaskWeblog extends Task {
     $max = S::pickFlat($args, 'max', $query ? count($entries) : 20);
 
     if ($entries) {
-      $allShown = count($entries) <= $max;
+      $remaining = count($entries) - $max;
+      $remaining <= 3 and $max = $remaining = 0;
+
       $entries = array_reverse(array_slice($entries, -$max));
       $entries = S($entries, array(__CLASS__, 'formatEntry'));
 
-      $allShown and $allShown = HLEx::p('EOF', 'eof');
-      echo HLEx::div(join(S($entries, NS.'HLEx.pre')).$allShown, 'entries');
+      $remaining = HLEx::p($remaining > 0 ? "$remaining more." : 'EOF', 'eof');
+      echo HLEx::div(join(S($entries, NS.'HLEx.pre')).$remaining, 'entries');
     } else {
       echo HLEx::p('Log file '.HLEx::kbd_q($current).' is empty.', 'none');
     }

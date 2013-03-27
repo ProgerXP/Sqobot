@@ -1,7 +1,7 @@
 <?php namespace Sqobot;
 
 class TaskWebtasks extends Task {
-  public $title = 'Task shell';
+  public $title = 'Task Shell';
 
   function do_(array $args = null) {
     $ran = (($help = Web::is('help')) or Web::is('exec'));

@@ -7,10 +7,14 @@ class Error extends Exception {
   public $object;
 
   static function re(Exception $previous, $append = '') {
+    throw static::wrap($previous, $append);
+  }
+
+  static function wrap(Exception $previous, $append = '') {
     $msg = $previous->getMessage();
     $append and $msg = "$append\n$msg";
     $object = isset($previous->object) ? $previous->object : null;
-    throw new static($object, $msg, $previous);
+    return new static($object, $msg, $previous);
   }
 
   function __construct($object, $msg = null, Exception $previous = null) {
@@ -39,6 +43,12 @@ class EQuery extends Error {
       return $stmt;
     }
   }
+}
+
+class EDbImport extends EQuery {
+  public $sql;
+  public $affected;
+  public $remainingSQLs;
 }
 
 class EAtoms extends Error { }
@@ -238,13 +248,26 @@ function db() {
   return Core::$pdo;
 }
 
+// Ignores blank commands (';;') and comments ('--...').
 function dbImport($sqls) {
   is_array($sqls) or $sqls = explode(';', $sqls);
 
   $sum = 0;
-  // closing cursor in case it's an accidental SELECT; from PHP docs:
-  // "Some drivers require to close cursor before executing next statement."
-  foreach ($sqls as $sql) { $sql and $sum += db()->exec($sql)->closeCursor(); }
+
+  foreach ($sqls as $i => $sql) {
+    $sql = trim(preg_replace('~^[ \t]*--([ \t].*)?~mu', '', $sql));
+
+    try {
+      $sql and $sum += db()->exec($sql);
+    } catch (\Exception $e) {
+      $e = EDbImport::wrap($e, "Error running $sql.");
+      $e->sql = $sql;
+      $e->affected = $sum;
+      $e->remainingSQLs = array_slice($sqls, $i + 1);
+      throw $e;
+    }
+  }
+
   return $sum;
 }
 

@@ -253,10 +253,13 @@ class TaskAtoms extends Task {
     closedir($h);
 
     $sfiles = $files == 1 ? '' : 's';
-    echo "$files non-empty atom$sfiles here, ", S::sizeStr($size), " in total.", PHP_EOL,
-         PHP_EOL,
-         "  Total transactions:   $transactions", PHP_EOL,
-         "  Max transactions:     $max[0], in $max[1]", PHP_EOL,
-         "  Min transactions:     $min[0], in $min[1]", PHP_EOL;
+    echo "$files non-empty atom$sfiles here, ", S::sizeStr($size), " in total.", PHP_EOL;
+
+    if ($files > 0) {
+      echo PHP_EOL,
+           "  Total transactions:   $transactions", PHP_EOL,
+           "  Max transactions:     $max[0], in ", basename($max[1]), PHP_EOL,
+           "  Min transactions:     $min[0], in ", basename($min[1]), PHP_EOL;
+    }
   }
 }

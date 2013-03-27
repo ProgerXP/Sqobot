@@ -1,7 +1,7 @@
 <?php namespace Sqobot;
 
 class TaskWebnodes extends Task {
-  public $title = 'Other nodes';
+  public $title = 'Other Nodes';
 
   function do_(array $args = null) {
     $rows = S(Node::all(), function ($node) use (&$i) {

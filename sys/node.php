@@ -67,7 +67,7 @@ class Node {
   }
 
   function status($short = true) {
-    return $this->call('status', compact('short'))->fetchData();
+    return $this->call('status')->addQuery(compact('short'))->fetchData();
   }
 
   function call($task, array $post = array()) {

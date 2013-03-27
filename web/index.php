@@ -28,9 +28,15 @@ try {
 } catch (ENoTask $e) {
   Web::quit(404, $e->getMessage());
 } catch (\Exception $e) {
+  if (Web::is('naked')) {
+    // this is likely a remote AJAX request and user won't see the message.
+    error("Problem running task [$task]: ".$e->getMessage());
+  }
+
   $info =
     "<p class=\"task error\">Problem running task ".HLEx::b_q($task).": ".
-    HLEx::kbd_q(exLine($e))."</p><hr>".HLEx::pre_q($e->getTraceAsString());
+    HLEx::kbd_q(exLine($e))."</p><hr>".
+    HLEx::pre_q($e->getTraceAsString(), array('style' => 'text-align: left'));
 
   echo Web::quit(500, $info);
 }

@@ -17,7 +17,7 @@ class TaskWebindex extends Task {
           $tasks[$task] = Web::runTitled($task, $title);
         } catch (\Exception $e) {
           $tasks[$task] =
-            "<p class=\"task error\">Problem running task ".HLEx::b_q($task).": ".
+            "<p class=\"task error border\">Problem running task ".HLEx::b_q($task).": ".
             HLEx::kbd_q(exLine($e))."</p>";
         }
       }
