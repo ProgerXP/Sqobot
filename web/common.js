@@ -38,7 +38,7 @@ function hookTasks() {
   })
 
   $(document).on('change', '.web-tasks select', function () {
-    $(this).parents('form:first').find('.btn input:first')[0].focus()
+    $(this).parents('form:first').find('.btn button:first')[0].focus()
   })
 
   $(document).on('click', '.web-tasks button', function () {

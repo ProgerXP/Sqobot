@@ -25,7 +25,9 @@ class TaskWebpatch extends Task {
       <input type="hidden" name="task" value="patch">
 
       <p>
-        <b>Replace files</b> (ZIP or single file):
+        <b>Replace files</b>
+        (<span class="help">ZIP or single file;</span>
+         <label><input type="checkbox" name="rawzip" value="1"> raw ZIP</label>):
         <input type="file" name="files">
       </p>
 
@@ -49,7 +51,7 @@ class TaskWebpatch extends Task {
   }
 
   function patchFiles($local, $name) {
-    $isZip = S::ext($name) === '.zip';
+    $isZip = (!Web::is('rawzip') and S::ext($name) === '.zip');
 
     if (!$isZip) {
       if (copy($local, $name)) {
@@ -159,9 +161,12 @@ class TaskWebpatch extends Task {
 
       try {
         $req = $node->call('patch')->addQuery('self');
+        Web::is('rawzip') and $req->addQuery('rawzip');
 
         foreach ($uploads as $var => $upload) {
-          $req->upload($var, $upload['name'], fopen($upload['tmp_name'], 'rb'));
+          if ($upload) {
+            $req->upload($var, $upload['name'], fopen($upload['tmp_name'], 'rb'));
+          }
         }
 
         echo $req->fetchData();

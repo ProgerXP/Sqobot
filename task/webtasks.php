@@ -98,7 +98,8 @@ class TaskWebtasks extends Task {
 
     try {
       $obj = Task::make($task);
-      $output = $obj->capture($method, empty($args['help']) ? array() : null);
+      $passArgs = empty($args['help']) ? Core::$cl['options'] : null;
+      $output = $obj->capture($method, $passArgs);
       Core::$cl = null;
     } catch (ENoTask $e) {
       Web::quit(400, HLEx::p_q($e->getMessage()));
