@@ -1,9 +1,5 @@
 <?php namespace Sqobot;
 
-if ($table = cfg('dbPageIndex')) {
-  PageIndex::$defaultTable = $table == '1' ? 'pages' : $table;
-}
-
 class PageIndex extends Row {
   static $fields = array('table', 'site', 'site_id');
 
@@ -20,4 +16,8 @@ class PageIndex extends Row {
   function table($new = null) {
     return static::tableName();
   }
+}
+
+if ($table = cfg('dbPageIndex')) {
+  PageIndex::$defaultTable = $table == '1' ? 'pages' : $table;
 }
