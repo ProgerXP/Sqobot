@@ -5,23 +5,29 @@ class TaskWebstatus extends Task {
 
   function do_(array $args = null) {
     if (empty($args['short'])) {
-      $atoms = Task::make('atoms')->capture('count');
-      $stats = Task::make('queue')->capture('stats');
+      $atoms = rtrim(Task::make('atoms')->capture('count'));
+      $pages = rtrim(Task::make('pages')->capture('stats'));
+      $queue = rtrim(Task::make('queue')->capture('stats'));
 
       echo strpos($atoms, "\n") ? HLEx::pre_q($atoms, 'atoms') : '',
-           HLEx::pre_q($stats, 'gen output');
+           strpos($pages, "\n") ? HLEx::pre_q($pages, 'pages') : '',
+           HLEx::pre_q($queue, 'gen output queue');
     } else {
       $this->outputShort($args);
     }
   }
 
   function outputShort(array $args = null) {
-    $stats = S::pickFlat($args, 'stats', function () {
-      return Task::make('queue')->capture('stats');
-    });
+    echo '<p>';
+    $this->outputShortQueue(Task::make('queue')->capture('stats'));
+    echo '</p><p>';
+    $this->outputShortPages(Task::make('pages')->capture('stats'));
+    echo '</p>';
+  }
 
+  function outputShortQueue($stats) {
     $parts = preg_split('~^\d+\. (.+)~m', $stats, -1, PREG_SPLIT_DELIM_CAPTURE);
-    if (!$parts) { return '<em>Queue is empty.</em>'; }
+    if (!$parts) { return print '<em>Queue is empty.</em>'; }
 
     $result = array();
     $allTotal = $allErrors = 0;
@@ -49,8 +55,48 @@ class TaskWebstatus extends Task {
     echo ' ', join(', ', $result), '.';
   }
 
-  function matchAttribute($caption, $part) {
-    if (preg_match("~^  $caption: *(\d+)~im", $part, $match)) {
+  function outputShortPages($stats) {
+    $parts = preg_split('~^\d+\. (.+)~m', $stats, -1, PREG_SPLIT_DELIM_CAPTURE);
+
+    $result = array();
+    $allTotal = 0;
+
+    foreach ($parts as $i => $part) {
+      if ($i == 0) {
+        // skip preamble.
+      } elseif ($i % 2 == 0) {
+        $allTotal += $total = $this->matchAttribute('Total', $part) ?: '-';
+
+        $timestamp = $this->matchAttribute('Populated on', $part, false);
+        $timestamp = strtotime(preg_replace('~[a-z]*~i', '', $timestamp));
+
+        if ($timestamp) {
+          $time = date('H:i', $timestamp);
+          if (date('d.m.Y') !== date('d.m.Y', $timestamp)) {
+            $time .= ' on '.date('d.m', $timestamp);
+          }
+
+          $time = ', pop. at '.timeTag($time, $timestamp);
+        }
+
+        $regexp = "~^  ([^A-Z][^:]+): *(\d+)~im";
+        if (preg_match_all($regexp, $part, $matches, PREG_SET_ORDER)) {
+          $sites = join( ', ', S(S::combine($matches[1], $matches[2]), '"? ?"') );
+        } else {
+          $sites = '';
+        }
+
+        $result[] = HLEx::q($parts[$i - 1])." ($total$time$sites)";
+      }
+    }
+
+    $s = $allTotal == 1 ? '' : 's';
+    echo "<b>$allTotal</b> page$s: ", join(', ', $result), '.';
+  }
+
+  function matchAttribute($caption, $part, $num = true) {
+    $num = $num ? '\d' : '.';
+    if (preg_match("~^  $caption: *($num+)~im", $part, $match)) {
       return $match[1];
     }
   }

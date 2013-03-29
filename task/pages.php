@@ -1,9 +1,34 @@
 <?php namespace Sqobot;
 
-class TaskPages extends TaskAtoms {
+class TaskPages extends Task {
+  static function prereq() {
+    if (!class_exists('ZipArchive')) {
+      return print 'ZipArchive class (php_zip extension) is required.';
+    }
+  }
+
+  static function packZIP($dest) {
+    $destZIP = S::newExt($dest, '.zip');
+    echo PHP_EOL, "Packing to $destZIP... ";
+
+    $zip = new \ZipArchive;
+
+    if (($error = $zip->open($destZIP, \ZipArchive::CREATE)) !== true) {
+      return print "cannot create file or it exists, ZipArchive error code $error.";
+    } elseif (!$zip->addFile($dest, basename($dest))) {
+      return print "cannot add [$dest] to it.";
+    }
+
+    $zip->close();
+    unlink($dest);
+
+    echo 'ok', PHP_EOL;
+    return $destZIP;
+  }
+
   function do_pack(array $args = null) {
     if ($args === null or !opt(0)) {
-      return print 'pages pack TABLE [...]'.PHP_EOL.
+      return print 'pages pack [*]TABLE [...]'.PHP_EOL.
                    '  --out[=out/pages.sql] --over --zip'.PHP_EOL.
                    '  --batch=15000';
     }
@@ -14,29 +39,44 @@ class TaskPages extends TaskAtoms {
     $dest = S::pickFlat($args, 'out', 'out/pages.sql');
     S::mkdirOf($dest);
 
-    if (file_exists($dest) and empty($args['over'])) {
+    $destCheck = empty($args['zip']) ? $dest : S::newExt($dest, '.zip');
+    if (file_exists($destCheck) and empty($args['over'])) {
       return print "Target SQL file already exists: [$dest] - use --over to overwrite.";
     } elseif (!($h = fopen($dest, 'wb'))) {
       return print "Cannot fopen($dest).";
     }
 
-    $flush = function ($table = null) use (&$count, &$sql, $h) {
+    $flush = function ($table = null, $withTime = true) use (&$count, &$sql, $h) {
       $count = 0;
       $sql and fwrite($h, substr($sql, 0, -1).";\n\n");
 
-      $sql = "INSERT IGNORE INTO `%TABLE%` (`table`, `site`, `site_id`) VALUES";
+      $sql = "DELETE FROM `%TABLE%` WHERE `table` = ".db()->quote($table).
+             " AND `site` = '';\n\n".
+             "INSERT IGNORE INTO `%TABLE%` (`table`, `site`, `site_id`) VALUES";
+
+      $withTime and $sql .= "\n  (".db()->quote($table).", '', ".time()."),";
       $table and $sql = "-- Pages of $table --\n\n$sql";
     };
 
     foreach (opt() as $table) {
-      $flush($table);
+      $fromPages = S::unprefix($table, '*');
+      $table === '' and $table = cfg('dbPrefix').PageIndex::$defaultTable;
+
+      if (!$table) {
+        echo $fromPages ? 'dbPageIndex config option is unset, ignoring "*" table.'
+                        : 'Empty table name - ignoring.';
+        continue;
+      }
+
+      $flush($table, !$fromPages);
       $total = 0;
 
       echo $table, '... ';
-      $stmt = exec('SELECT site, site_id FROM `'.$table.'`');
+      $col = $fromPages ? '`table`, ' : '';
+      $stmt = exec("SELECT {$col}site, site_id FROM `$table`");
 
       while ($row = $stmt->fetch(\PDO::FETCH_NUM)) {
-        array_unshift($row, $table);
+        $fromPages or array_unshift($row, $table);
         $sql .= "\n  (".join(', ', S($row, array(db(), 'quote'))).'),';
         ++$count >= $batch and $flush();
         ++$total;
@@ -46,35 +86,19 @@ class TaskPages extends TaskAtoms {
       echo $total, PHP_EOL;
     }
 
-    $flush();
+    isset($table) and $flush($table);
     fclose($h);
 
-    if (!empty($args['zip'])) {
-      $destZIP = S::newExt($dest, '.zip');
-      echo PHP_EOL, "Packing to $destZIP... ";
-
-      $zip = new \ZipArchive;
-
-      if (($error = $zip->open($destZIP, \ZipArchive::CREATE)) !== true) {
-        return print "cannot create file or it exists, ZipArchive error code $error.";
-      } elseif (!$zip->addFile($dest, basename($dest))) {
-        return print "cannot add [$dest] to it.";
-      }
-
-      $zip->close();
-      unlink($dest);
-
-      echo 'ok', PHP_EOL;
-    }
+    empty($args['zip']) or static::packZIP($dest);
   }
 
   function do_unpack(array $args = null) {
     if ($args === null) {
-      return print 'pages unpack [pages.zip|.sql] --table=pages --keep --merge';
+      return print 'pages unpack [pages.zip|.sql] --table=pages --keep --merge --zip';
     }
 
     $src = opt(0, 'pages.zip');
-    $zipMode = S::ends($src, '.zip');
+    $zipMode = (!empty($args['zip']) or S::ends($src, '.zip'));
     $table = S::pickFlat($args, 'table', cfg('dbPrefix').'pages');
 
     if (!is_file($src)) {
@@ -118,15 +142,18 @@ class TaskPages extends TaskAtoms {
 
         if (substr($sql, -1) === ';') {
           $total += $count = EQuery::exec(prep($sql), true)->rowCount();
-          $sql = '';
 
-          $s = $count == 1 ? '' : 's';
-          echo "Inserted $count row$s.", PHP_EOL;
+          if (!S::starts(ltrim($sql), 'DELETE ')) {
+            $s = $count == 1 ? '' : 's';
+            echo "Inserted $count row$s.", PHP_EOL;
+          }
+
+          $sql = '';
         }
       }
     }
 
-    $s = $count == 1 ? '' : 's';
+    $s = $total == 1 ? '' : 's';
     echo PHP_EOL, "Done inserting $total row$s.", PHP_EOL;
 
     $stmt = exec("SELECT COUNT(1) AS count FROM `$table`");
@@ -157,6 +184,13 @@ class TaskPages extends TaskAtoms {
 
     foreach (opt() as $table) {
       echo $table, '...', PHP_EOL;
+
+      PageIndex::make(array(
+        'table'           => $table,
+        'site'            => '',
+        'site_id'         => time(),
+      ))->createIgnore();
+
       $stmt = exec('SELECT site, site_id FROM `'.$table.'`');
 
       while ($row = $stmt->fetch(\PDO::FETCH_ASSOC)) {
@@ -175,5 +209,159 @@ class TaskPages extends TaskAtoms {
     $table = S::pickFlat($args, 'table', cfg('dbPrefix').'pages');
     exec('TRUNCATE `'.$table.'`');
     echo "Cleared $table.", PHP_EOL;
+  }
+
+  function do_stats(array $args = null) {
+    if ($args === null) {
+      return print 'pages stats --table=pages';
+    }
+
+    $table = S::pickFlat($args, 'table', cfg('dbPrefix').'pages');
+
+    $stmt = exec("SELECT COUNT(1) AS count FROM`$table`");
+    $total = $stmt->fetch()->count;
+    $stmt->closeCursor();
+
+    $stmt = exec("SELECT `table`, COUNT(1) AS count FROM $table GROUP by `table`");
+    $tables = $stmt->fetchAll();
+    $stmt->closeCursor();
+
+    $stotal = $total == 1 ? '' : 's';
+    $stables = count($tables) == 1 ? '' : 's';
+    echo "$total page$stotal of ", count($tables), " table$stables.", PHP_EOL;
+
+    if (!$total) {
+      return;
+    }
+
+    usort($tables, function ($a, $b) { return strcmp($a->table, $b->table); });
+
+    $stTimes = prep("SELECT site_id FROM $table WHERE `table` = ? AND site = ''");
+
+    $sql = "SELECT site, COUNT(1) AS count, MIN(site_id) AS min, MAX(site_id) AS max".
+           " FROM`$table` WHERE `table` = ? AND site != '' GROUP BY site";
+    $stSites = prep($sql);
+
+    foreach ($tables as $i => $table) {
+      $stTimes->bindParam(1, $table->table);
+      $populatedAt = EQuery::exec($stTimes)->fetch();
+      $stTimes->closeCursor();
+
+      echo PHP_EOL,
+           $i + 1, '. ', $table->table, PHP_EOL,
+           PHP_EOL,
+           '  Total:          ', $table->count, PHP_EOL,
+           '  Populated on:   ';
+
+       if ($populatedAt) {
+          echo date('d.m.Y \a\t H:i:s', $populatedAt->site_id), PHP_EOL;
+        } else {
+          echo 'unknown, no site = \'\' row', PHP_EOL;
+        }
+
+      $stSites->bindParam(1, $table->table);
+      EQuery::exec($stSites);
+
+      while ($row = $stSites->fetch()) {
+        echo sprintf('  %-16s', $row->site.':'), $row->count, ' total';
+
+        if ($row->count) {
+          echo ';', PHP_EOL,
+               '                  min site ID = ', $row->min, ', max = ', $row->max;
+        }
+
+        echo PHP_EOL;
+      }
+
+      $stSites->closeCursor();
+    }
+  }
+
+  function do_sync(array $args = null) {
+    $started = microtime(true);
+    $pager = Task::make('pages');
+
+    if ($args === null or !opt(0)) {
+      echo 'pages sync TABLE [...]'.
+           ' - accepts all parameters of `pages pack`, plus:', PHP_EOL,
+           '  --nodes=node,node,...', PHP_EOL, PHP_EOL;
+      $pager->call('pack', null);
+      return;
+    } elseif ($error = static::prereq()) {
+      return $error;
+    }
+
+    $zip = new \ZipArchive;
+
+    $main = S::pickFlat($args, 'out', 'out/pages.sql');
+    $pager->call('pack', $args);
+
+    if (!is_file($main) or !($hmain = fopen($main, 'ab'))) {
+      return print "Exiting - no packed pages file [$main] exists.";
+    }
+
+    echo PHP_EOL, 'Retrieving current pages from nodes...', PHP_EOL;
+
+    foreach (Node::all() as $node) {
+      echo "  {$node->id()}... ";
+
+      $file = 'out/pages-node.zip.tmp';
+
+      $data = $node->call('pages-pack')
+        ->addQuery(array('tables' => '*', 'zip' => 1))
+        ->fetchData();
+
+      if (!file_put_contents($file, $data)) {
+        throw new Error($this, "Cannot write temp file [$file].");
+      } elseif (($error = $zip->open($file)) !== true) {
+        echo "cannot open its ZIP archive, ZipArchive error code $error.";
+      } elseif (!($name = $zip->getNameIndex(0)) or S::ext($name) !== '.sql') {
+        echo "first archived file [$name] must have .sql extension.";
+      } elseif (!($h = $zip->getStream($name))) {
+        echo "cannot open stream of its ZIP\'s first file [$name].";
+      } else {
+        echo "$name: ";
+
+        fwrite($hmain, "\n-- == Node {$node->id()} == --\n\n");
+        $bytes = 0;
+
+        while (!feof($h)) {
+          $bytes += fwrite($hmain, fread($h, 65536));
+        }
+
+        fclose($h);
+        $zip->close();
+
+        echo "$bytes bytes, ok", PHP_EOL;
+      }
+    }
+
+    fclose($hmain);
+    isset($file) and unlink($file);
+
+    echo PHP_EOL;
+
+    Core::$cl['index'][0] = $main;
+    $this->do_unpack(array('keep' => true) + $args);
+
+    if (!is_string($main = static::packZIP($main))) {
+      return;
+    }
+
+    echo PHP_EOL, 'Unpacking on nodes:', PHP_EOL;
+
+    foreach (Node::all() as $i => $node) {
+      echo PHP_EOL, $i + 1, ". {$node->id()}", PHP_EOL;
+
+      $log = $node->call('pages-unpack')
+        ->addQuery('zip')
+        ->upload('pages', 'pages.zip', fopen($main, 'rb'))
+        ->fetchData();
+
+      echo str_replace(PHP_EOL, PHP_EOL.'  ', PHP_EOL.$log), PHP_EOL;
+    }
+
+    unlink($main);
+    echo 'Finished in ', round(microtime(true) - $started, 3), ' sec.', PHP_EOL;
   }
 }

@@ -94,10 +94,18 @@ textarea:focus,
 input:focus:not([type=checkbox]):not([type=radio])
   { outline: 2px solid #265D9B; outline-offset: -1px; }
 
-textarea, input, select, button {
+textarea, input, select, button,
+.web-status .atoms, .web-status .pages {
   -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
+}
+
+.web-status .queue:after {
+  content: "";
+  display: table;
+  clear: right;
+  margin-bottom: -1em;
 }
 
 .hide { display: none; }
@@ -171,7 +179,16 @@ span.error {
  ***/
 
 /*** status ***/
-.web-status .atoms { float: right; margin-right: 1em; }
+.web-status .atoms, .web-status .pages {
+  float: right;
+  clear: right;
+  margin: 1em 1em 0 0;
+  width: 50%;
+  border: 1px solid #c0c0c0;
+  padding: 1em;
+  background: white;
+  border-radius: 3px;
+}
 .web-status pre:first-line { font-weight: bold; }
 
 /*** log ***/
@@ -184,11 +201,9 @@ span.error {
 }
 .web-log pre:hover { background: rgba(255, 255, 255, 0.7); }
 .web-log pre + pre { border-top: 0; }
-.web-log .eof {
-  color: gray;
-  font-family: monospace;
-  margin-bottom: 0;
-}
+.web-log p.now, .web-log p.eof { color: gray; font-family: monospace; }
+.web-log p.now { margin-top: 0; }
+.web-log p.eof { margin-bottom: 0; }
 .web-log kbd { color: navy; }
 .web-log kbd:nth-of-type(2) ~ kbd { font-weight: bold; }
 
@@ -219,6 +234,7 @@ span.error {
 /*** nodes ***/
 .web-nodes .nodes th { white-space: nowrap; padding-right: 1em; }
 .web-nodes .nodes .errors { color: maroon; }
+.web-nodes .nodes tr p { margin: 0; }
 
 /*** files ***/
 .web-files p.loading { position: absolute; margin: -2.75em 0 0; }

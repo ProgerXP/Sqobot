@@ -67,8 +67,7 @@ class TaskWebfiles extends Task {
           $links[] = HLEx::a(HLEx::tag('img', 'zoom.png'), taskURL('files', $query));
 
           $time = $time = filemtime($full);
-          $title = S::sqlDateTime($time);
-          $time = HLEx::time(date('d M', $time), $time, compact('title'));
+          $time = timeTag(date('d M', $time), $time);
 
           $html .= HLEx::td($link, 'name');
           $html .= HLEx::td(S::sizeStr(filesize($full)), 'size').

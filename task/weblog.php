@@ -7,6 +7,7 @@ class TaskWeblog extends Task {
     $replaces = array('[' => '[<kbd>', ']' => '</kbd>]');
     $msg = strtr(HLEx::q($msg), $replaces);
     $msg = preg_replace('~^(\$ )(\w+)~', '\\1<b>\\2</b>', $msg);
+    $msg = preg_replace('~([\'"])(.*?)(\\1)~', '<kbd>\\0</kbd>', $msg);
     return $msg;
   }
 
@@ -35,8 +36,9 @@ class TaskWeblog extends Task {
       $entries = array_reverse(array_slice($entries, -$max));
       $entries = S($entries, array(__CLASS__, 'formatEntry'));
 
+      $now = HLEx::p('Current time is '.date('H:i:s'), 'now');
       $remaining = HLEx::p($remaining > 0 ? "$remaining more." : 'EOF', 'eof');
-      echo HLEx::div(join(S($entries, NS.'HLEx.pre')).$remaining, 'entries');
+      echo HLEx::div($now.join(S($entries, NS.'HLEx.pre')).$remaining, 'entries');
     } else {
       echo HLEx::p('Log file '.HLEx::kbd_q($current).' is empty.', 'none');
     }

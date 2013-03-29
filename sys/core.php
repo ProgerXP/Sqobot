@@ -348,6 +348,11 @@ function toTimestamp($time) {
   }
 }
 
+function timeTag($text, $time = null) {
+  $time or $time = time();
+  return HLEx::time($text, $time, array('title' => S::sqlDateTime($time)));
+}
+
 //= DOMDocument
 function parseXML($str) {
   $doc = new \DOMDocument;

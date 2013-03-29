@@ -2,6 +2,16 @@
 _.mixin(_.str.exports())
 
 $ && $(function () {
+  $(document).ajaxError(function (event, xhr, settings, error) {
+    var response = (xhr.responseText || '').match(/<\/h2>[\s\S]*/)
+    response && (response = response[0].replace(/<hr\n[\s\S]*$/, ''))
+
+    var msg = 'AJAX error: ' + error + '\n\n' + settings.type + ' ' + settings.url +
+              '\n\n' + $('<div>').html(response).text()
+
+    alert(msg)
+  })
+
   hookTasks()
   hookFiles()
 })

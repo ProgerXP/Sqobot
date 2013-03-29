@@ -3,6 +3,28 @@
 class TaskWebpatch extends Task {
   public $title = 'Patching';
 
+  static function patchNodes(array $uploads, $rawZIP = false) {
+    foreach (Node::all() as $node) {
+      echo HLEx::h3_q('Node '.$node->id());
+
+      try {
+        $req = $node->call('patch')->addQuery('self');
+        $rawZIP and $req->addQuery('rawzip');
+
+        foreach ($uploads as $var => $upload) {
+          if ($upload) {
+            $req->upload($var, $upload['name'], fopen($upload['tmp_name'], 'rb'));
+          }
+        }
+
+        echo $req->fetchData();
+      } catch (\Exception $e) {
+        echo HLEx::p('Error sending request: '.HLEx::kbd_q($msg = exLine($e)).'.');
+        error("Error contacting node {$node->id()} to patch: $msg.");
+      }
+    }
+  }
+
   function do_(array $args = null) {
     $files = Web::upload('files');
     $sql = Web::upload('sql');
@@ -15,7 +37,7 @@ class TaskWebpatch extends Task {
       }
 
       if (empty($args['self'])) {
-        $this->patchNodes(compact('files', 'sql'));
+        static::patchNodes(compact('files', 'sql'), Web::is('rawzip'));
       }
 
       return;
@@ -153,27 +175,5 @@ class TaskWebpatch extends Task {
     echo $file ? '</li>' : '</p>';
 
     return $affected;
-  }
-
-  function patchNodes(array $uploads) {
-    foreach (Node::all() as $node) {
-      echo HLEx::h3_q('Node '.$node->id());
-
-      try {
-        $req = $node->call('patch')->addQuery('self');
-        Web::is('rawzip') and $req->addQuery('rawzip');
-
-        foreach ($uploads as $var => $upload) {
-          if ($upload) {
-            $req->upload($var, $upload['name'], fopen($upload['tmp_name'], 'rb'));
-          }
-        }
-
-        echo $req->fetchData();
-      } catch (\Exception $e) {
-        echo HLEx::p('Error sending request: '.HLEx::kbd_q($msg = exLine($e)).'.');
-        error("Error contacting node {$node->id()} to patch: $msg.");
-      }
-    }
   }
 }
