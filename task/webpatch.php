@@ -48,8 +48,9 @@ class TaskWebpatch extends Task {
 
       <p>
         <b>Replace files</b>
-        (<span class="help">ZIP or single file;</span>
-         <label><input type="checkbox" name="rawzip" value="1"> raw ZIP</label>):
+        (<span class="help">ZIP or single file; </span
+          ><label><input type="checkbox" name="rawzip" value="1" checked="checked">
+                  raw ZIP</label>):
         <input type="file" name="files">
       </p>
 

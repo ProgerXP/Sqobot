@@ -14,7 +14,11 @@ class TaskWebindex extends Task {
         array_splice($toAdd, 0, 0, $rest);
       } elseif ($task !== 'index' and Web::canRun($task)) {
         try {
-          $tasks[$task] = Web::runTitled($task, $title);
+          $output = Web::runTitled($task, $title);
+
+          $regexp = 'Web'.strtolower($task).' task has no default method';
+          $regexp = "~</h2>\s*$regexp\.?\s*</div>\s*$~u";
+          preg_match($regexp, trim($output)) or $tasks[$task] = $output;
         } catch (\Exception $e) {
           $tasks[$task] =
             "<p class=\"task error border\">Problem running task ".HLEx::b_q($task).": ".

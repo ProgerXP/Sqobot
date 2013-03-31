@@ -50,12 +50,15 @@ class TaskPages extends Task {
       $count = 0;
       $sql and fwrite($h, substr($sql, 0, -1).";\n\n");
 
-      $sql = "DELETE FROM `%TABLE%` WHERE `table` = ".db()->quote($table).
-             " AND `site` = '';\n\n".
-             "INSERT IGNORE INTO `%TABLE%` (`table`, `site`, `site_id`) VALUES";
+      $sql = "INSERT IGNORE INTO `%TABLE%` (`table`, `site`, `site_id`) VALUES";
 
-      $withTime and $sql .= "\n  (".db()->quote($table).", '', ".time()."),";
-      $table and $sql = "-- Pages of $table --\n\n$sql";
+      if ($table and $withTime) {
+        $sql = "-- Pages of $table --\n\n".
+               "DELETE FROM `%TABLE%` WHERE `table` = ".
+               db()->quote($table)." AND `site` = '';\n\n".
+               "$sql\n".
+               "  (".db()->quote($table).", '', ".time()."),";
+      }
     };
 
     foreach (opt() as $table) {
@@ -83,6 +86,7 @@ class TaskPages extends Task {
       }
 
       $stmt->closeCursor();
+      $total or $sql = '';
       echo $total, PHP_EOL;
     }
 
@@ -284,7 +288,7 @@ class TaskPages extends Task {
     if ($args === null or !opt(0)) {
       echo 'pages sync TABLE [...]'.
            ' - accepts all parameters of `pages pack`, plus:', PHP_EOL,
-           '  --nodes=node,node,...', PHP_EOL, PHP_EOL;
+           '  --nodes=node,node,... --keep', PHP_EOL, PHP_EOL;
       $pager->call('pack', null);
       return;
     } elseif ($error = static::prereq()) {
@@ -361,7 +365,7 @@ class TaskPages extends Task {
       echo str_replace(PHP_EOL, PHP_EOL.'  ', PHP_EOL.$log), PHP_EOL;
     }
 
-    unlink($main);
+    empty($args['keep']) and unlink($main);
     echo 'Finished in ', round(microtime(true) - $started, 3), ' sec.', PHP_EOL;
   }
 }

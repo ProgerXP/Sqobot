@@ -90,8 +90,10 @@ class TaskWebstatus extends Task {
       }
     }
 
-    $s = $allTotal == 1 ? '' : 's';
-    echo "<b>$allTotal</b> page$s: ", join(', ', $result), '.';
+    if ($allTotal) {
+      $s = $allTotal == 1 ? '' : 's';
+      echo "<b>$allTotal</b> page$s: ", join(', ', $result), '.';
+    }
   }
 
   function matchAttribute($caption, $part, $num = true) {
