@@ -8,7 +8,7 @@ abstract class Task {
   static function all($web = false) {
     $standard = S(glob(ROOT.'task/*.php', GLOB_NOESCAPE), array('.basename', '.php'));
     $user = S(glob(ROOT.'user/[Tt]ask*.php', GLOB_NOESCAPE),
-              array('|basename|substr', 4, -4));
+              array('|', 'basename', array('.substr', 4, -4)));
     $tasks = array_unique(S::down(array_merge($standard, $user)));
 
     if ($web === null) {

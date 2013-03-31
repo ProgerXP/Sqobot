@@ -24,7 +24,7 @@ class Row {
     $sql = 'SELECT COUNT(1) AS count FROM `'.static::tableName().'`';
     $fields and $sql .= ' WHERE '.join(' AND ', S($fields, '#"`?` = ??"'));
 
-    $stmt = exec($sql, array_values($fields));
+    $stmt = exec($sql, array_values((array) $fields));
     $count = $stmt->fetch()->count;
     $stmt->closeCursor();
 

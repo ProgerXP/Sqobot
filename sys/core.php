@@ -81,7 +81,9 @@ class Core {
 
   static function loadConfig($file) {
     if (is_file($file) and $data = file_get_contents($file)) {
-      static::$config = static::parseExtConf($data) + static::$config;
+      // not using '+' to retain original order of options (previously loaded ones
+      // go first unless overriden by key); this matters for webScripts, for example.
+      static::$config = array_merge(static::$config, static::parseExtConf($data));
     }
   }
 

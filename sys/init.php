@@ -118,3 +118,7 @@ Core::loadConfig(opt('config', 'main').'.conf');
 foreach ((array) opt('cfg') as $config => $value) {
   Core::$config[$config] = $value;
 }
+
+if (is_file($user = ROOT.'user/init.php')) {
+  include $user;
+}
