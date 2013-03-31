@@ -30,7 +30,8 @@ class Web {
   //= true if all given tasks are available
   static function canRun($tasks) {
     is_array($tasks) or $tasks = explode(' ', $tasks);
-    return static::can(S($tasks, '"web?"'));
+    $tasks = S($tasks, '"web".strtok(?, "-")');
+    return static::can($tasks);
   }
 
   //* $perms array, str space-separated
@@ -57,13 +58,21 @@ class Web {
   //= str 't-patch perm-1 ...'
   static function perms() {
     $perms = cfg('user '.static::user());
-    S::unprefix($perms, '=') or $perms .= ' '.cfg('user');
+
+    if (!$perms or ($perms[0] !== '*' and !S::unprefix($perms, '='))) {
+      $perms .= ' '.cfg('user');
+    }
+
     return trim($perms);
   }
 
   //= null no HTTP authorization found, str 'usname'
   static function user() {
-    return S::pickFlat($_SERVER, 'PHP_AUTH_USER');
+    return static::info('PHP_AUTH_USER');
+  }
+
+  static function info($name, $default = null) {
+    return S::pickFlat($_SERVER, $name, $default);
   }
 
   static function sendStatus($code) {
@@ -146,7 +155,7 @@ class Web {
 
   //= bool
   static function https() {
-    return strcasecmp(S::pickFlat($_SERVER, 'HTTPS'), 'on') === 0;
+    return strcasecmp(static::info('HTTPS'), 'on') === 0;
   }
 
   // Read input variable.
@@ -230,8 +239,11 @@ class Web {
   }
 
   static function wrap($content, $title = null) {
-    $mediaURL = S::lastPart($_SERVER['REQUEST_URI'], '/').'/';
-    $title or $title = 'Sqobot Web';
+    $mediaURL = S::lastPart(static::info('REQUEST_URI'), '/').'/';
+    $title or $title = 'Sqobot Web - '.static::info('HTTP_HOST');
+
+    $styles = S(cfgGroup('webStyle'), array(NS.'S.arrize', "href"));
+    $scripts = S(cfgGroup('webScript'), array(NS.'S.arrize', "src"));
 
     ob_start();
     include ROOT.'web/page.html';

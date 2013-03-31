@@ -1,2 +1,2 @@
 #!/bin/sh
-php -d memory_limit=1G cli.php -- $*
+php -d memory_limit=1G `dirname $0`/cli.php -- $*

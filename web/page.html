@@ -7,7 +7,20 @@
 
     <title><?php echo $title?></title>
 
-    <link href="<?php echo $mediaURL?>styles.css" type="text/css" rel="stylesheet">
+    <?php
+      $default = array('type' => 'text/css');
+
+      foreach ($styles as $style) {
+        if (isset($style['embed'])) {
+          $embed = $style['embed'];
+          unset( $style['embed'] );
+          echo HLEx::style($embed, $style + $default);
+        } else {
+          S::unprefix($style['href'], '$') and $style['href'] = $mediaURL.$style['href'];
+          echo HLEx::tag('link', $style + array('rel' => 'stylesheet'));
+        }
+      }
+    ?>
   </head>
   <body>
     <div id="wrapper">
@@ -27,9 +40,17 @@
       </div>
     </div>
 
-    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
-    <script src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.4/underscore-min.js"></script>
-    <script src="//cdnjs.cloudflare.com/ajax/libs/underscore.string/2.3.0/underscore.string.min.js"></script>
-    <script src="<?php echo $mediaURL?>common.js"></script>
+    <?php
+      foreach ($scripts as $script) {
+        if (isset($script['embed'])) {
+          $embed = $script['embed'];
+          unset( $script['embed'] );
+          echo HLEx::script($embed, $script);
+        } else {
+          S::unprefix($script['src'], '$') and $script['src'] = $mediaURL.$script['src'];
+          echo HLEx::script('', $script);
+        }
+      }
+    ?>
   </body>
 </html>
