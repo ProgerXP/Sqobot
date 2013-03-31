@@ -1003,6 +1003,24 @@ class Utils extends Functions {
     while (--$limit != -1 and @rmdir( join(DS, $path) )) { array_pop($path); }
   }
 
+  static function rmrf($path) {
+    $path = realpath($path);
+
+    if (strlen($path) > 10) {
+      if (is_dir($path)) {
+        foreach (scandir($path) as $file) {
+          if ($file !== '.' and $file !== '..') {
+            static::rmrf("$path/$file");
+          }
+        }
+
+        @rmdir($path);
+      } else {
+        @unlink($path);
+      }
+    }
+  }
+
   // function ($path[, $append[, ...]])
   //= string without trailing slash unless last argument is ''
   //? path('/etc\\foo/', '\\rock/n', 'r011')    //=> /etc/foo/rock/n/roll (*nix) or with \ (Windows)
@@ -1638,13 +1656,13 @@ abstract class Callback {
 
   static function parsePiped(array $funcs) {
     if ($funcs) {
-      $isLast = count($funcs) > 1;
+      $isLast = count($funcs) < 2;
       $obj = static::parse(array_shift($funcs), $isLast);
 
       if (!$obj) {
         $obj = static::parsePiped($funcs);
       } elseif (!$isLast) {
-        $isLast or $obj->next = static::parsePiped($funcs);
+        $obj->next = static::parsePiped($funcs);
       }
 
       return $obj;
@@ -1781,7 +1799,7 @@ abstract class Callback {
 
     $this->hasArgs and $args = array_merge($this->argsLeft, $args, $this->argsRight);
     $result = $this->invokeWith($args);
-    return $this->next ? $this->next($result, $key) : $result;
+    return ($next = $this->next) ? $next($result, $key) : $result;
   }
 
   abstract function invokeWith(array $args);

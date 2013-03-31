@@ -134,8 +134,7 @@ class HLEx {
 
       foreach ($options as $value => $label) {
         is_array($value) or $value = compact('value');
-        $value == $selected and $value['selected'] = 'selected';
-
+        $value['value'] == $selected and $value['selected'] = 'selected';
         $result .= static::wrap_q('option', $label, $value);
       }
 

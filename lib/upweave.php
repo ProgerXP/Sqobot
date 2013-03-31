@@ -191,11 +191,12 @@ class Upweave {
       'Content-Transfer-Encoding' => 'binary',
     );
 
-    if (!$partial and $this->localFile) {
+    if (!$partial and $localFile = $this->localFile) {
       if ($this->freeMem >= $this->size) {
-        return file_get_contents($this->localFile);
+        return file_get_contents($localFile);
       } else {
-        return function ($self) { readfile($self->localFile); };
+        // cannot access protected $localFile from within the closure.
+        return function () use ($localFile) { readfile($localFile); };
       }
     } elseif ( $isBuf ? !isset($data[$start]) : (fseek($data, $start) != 0) ) {
       $this->headers['Content-Range'] = '*/'.$this->size;   // as per HTTP spec.
