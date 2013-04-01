@@ -46,7 +46,10 @@ class TaskPages extends Task {
       return print "Cannot fopen($dest).";
     }
 
-    $flush = function ($table = null, $withTime = true) use (&$count, &$sql, $h) {
+    $db = db();
+
+    $flush = function ($table = null, $withTime = true)
+                  use (&$count, &$sql, $h, $db) {
       $count = 0;
       $sql and fwrite($h, substr($sql, 0, -1).";\n\n");
 
@@ -55,9 +58,9 @@ class TaskPages extends Task {
       if ($table and $withTime) {
         $sql = "-- Pages of $table --\n\n".
                "DELETE FROM `%TABLE%` WHERE `table` = ".
-               db()->quote($table)." AND `site` = '';\n\n".
+               $db->quote($table)." AND `site` = '';\n\n".
                "$sql\n".
-               "  (".db()->quote($table).", '', ".time()."),";
+               "  (".$db->quote($table).", '', ".time()."),";
       }
     };
 
@@ -79,8 +82,14 @@ class TaskPages extends Task {
       $stmt = exec("SELECT {$col}site, site_id FROM `$table`");
 
       while ($row = $stmt->fetch(\PDO::FETCH_NUM)) {
+        $sql .= "\n  (";
         $fromPages or array_unshift($row, $table);
-        $sql .= "\n  (".join(', ', S($row, array(db(), 'quote'))).'),';
+
+        foreach ($row as $i => &$value) {
+          $sql .= ($i > 0 ? ', ' : '').$db->quote($s);
+        }
+
+        $sql .= '),';
         ++$count >= $batch and $flush();
         ++$total;
       }
@@ -134,6 +143,7 @@ class TaskPages extends Task {
 
     $sql = '';
     $total = 0;
+    $db = db();
 
     while (!feof($h)) {
       $line = trim(fgets($h));
@@ -145,9 +155,10 @@ class TaskPages extends Task {
         $sql .= $line;
 
         if (substr($sql, -1) === ';') {
-          $total += $count = EQuery::exec(prep($sql), true)->rowCount();
+          $count = $db->exec($sql);
 
-          if (!S::starts(ltrim($sql), 'DELETE ')) {
+          if (substr(ltrim($sql), 0, 7) !== 'DELETE ') {
+            $total += $count;
             $s = $count == 1 ? '' : 's';
             echo "Inserted $count row$s.", PHP_EOL;
           }
@@ -306,14 +317,24 @@ class TaskPages extends Task {
 
     echo PHP_EOL, 'Retrieving current pages from nodes...', PHP_EOL;
 
+    $fatal = onFatal(function () {
+      echo PHP_EOL,
+           'NOTE: if you\'re getting fopen() error it might indicate that', PHP_EOL,
+           '      dlTimeout is insufficient for a node to complete requested', PHP_EOL,
+           '      operation - try increasing this value.', PHP_EOL;
+    });
+
     foreach (Node::all() as $node) {
       echo "  {$node->id()}... ";
 
       $file = 'out/pages-node.zip.tmp';
+      $time = microtime(true);
 
       $data = $node->call('pages-pack')
         ->addQuery(array('tables' => '*', 'zip' => 1))
         ->fetchData();
+
+      echo round(microtime(true) - $time, 1).' sec; ';
 
       if (!file_put_contents($file, $data)) {
         throw new Error($this, "Cannot write temp file [$file].");
@@ -355,17 +376,21 @@ class TaskPages extends Task {
     echo PHP_EOL, 'Unpacking on nodes:', PHP_EOL;
 
     foreach (Node::all() as $i => $node) {
-      echo PHP_EOL, $i + 1, ". {$node->id()}", PHP_EOL;
+      echo PHP_EOL, $i + 1, ". {$node->id()}... ";
+      $time = microtime(true);
 
       $log = $node->call('pages-unpack')
         ->addQuery('zip')
         ->upload('pages', 'pages.zip', fopen($main, 'rb'))
         ->fetchData();
 
-      echo str_replace(PHP_EOL, PHP_EOL.'  ', PHP_EOL.$log), PHP_EOL;
+      echo round(microtime(true) - $time, 1).' sec', PHP_EOL,
+           str_replace(PHP_EOL, PHP_EOL.'  ', PHP_EOL.$log), PHP_EOL;
     }
 
+    offFatal($fatal);
+
     empty($args['keep']) and unlink($main);
-    echo 'Finished in ', round(microtime(true) - $started, 3), ' sec.', PHP_EOL;
+    echo 'Finished in ', round(microtime(true) - $started, 1), ' sec.', PHP_EOL;
   }
 }
