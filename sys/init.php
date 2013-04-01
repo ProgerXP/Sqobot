@@ -2,6 +2,7 @@
 
 define(__NAMESPACE__.'\\NS', __NAMESPACE__.'\\');
 defined(NS.'ROOT') or define(NS.'ROOT', dirname(__DIR__).'/');
+define(NS.'Version', '1.0a');
 define(NS.'Homepage', 'https://github.com/ProgerXP/Sqobot');
 
 error_reporting(-1);

@@ -135,7 +135,7 @@ class Downwind {
 
   function post(array $data, $method = 'post') {
     $this->method($method)->freeData();
-    $this->data = static::queryStr($data, true);
+    $data and $this->data = static::queryStr($data, true);
     return $this;
   }
 

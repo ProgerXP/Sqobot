@@ -90,4 +90,17 @@ class NodeCall extends Download {
     $less = preg_replace('~<h2>.*?</h2>~uis', '', $body, 1);
     return preg_last_error() ? $body : $less;
   }
+
+  // Clearing obfuscation headers to their native PHP values - nothing to hide from
+  // friendly Sqobot nodes.
+  function header_accept_language($str = '') { }
+  function header_accept_charset($str = '') { }
+  function header_accept($str = '') { }
+  function header_referer() { }
+
+  function header_user_agent() {
+    $class = get_class($this);
+    substr($class, 0, $len = strlen(NS)) === NS and $class = substr($class, $len);
+    return 'Sqobot v'.Version." $class";
+  }
 }
