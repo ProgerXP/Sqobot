@@ -52,6 +52,7 @@ body:after { bottom: -3px; height: 3px; }
   z-index: 5;
   border-bottom: 1px solid #bbdbff;
   box-shadow: 0 0 2px gray;
+  color: #bbdbff;
 }
 
 #menu li {
@@ -59,13 +60,15 @@ body:after { bottom: -3px; height: 3px; }
   list-style: none;
 }
 
-#menu li + li:before {
-  content: " • ";
-  color: white;
-}
-
+#menu li + li:before { content: " • "; }
 #menu li a { color: white; }
 #menu li.sqobot a { font-weight: bold; color: #bbdbff; }
+
+#menu li.sqobot .version {
+  font-size: 63%;
+  vertical-align: top;
+  color: white;
+}
 
 #content {
   padding: 1.5em;
@@ -102,9 +105,9 @@ textarea, input, select, button,
 #content:after, .web-status .queue:after {
   content: "";
   display: table;
-  clear: right;
-  margin-bottom: -1em;
+  clear: both;
 }
+.web-status .queue:after { margin-bottom: -1em; }
 
 textarea:focus,
 input:focus:not([type=checkbox]):not([type=radio])
@@ -133,7 +136,13 @@ table.pivot { table-layout: fixed; }
 textarea.wide, input.wide { width: 100%; }
 textarea.wide { resize: vertical; }
 
-hr { border: 0; border-top: 1px solid #c0c0c0; margin-left: -1.5em; margin-right: -1.5em; }
+hr {
+  border: 0;
+  border-top: 1px solid #c0c0c0;
+  margin-left: -1.5em;
+  margin-right: -1.5em;
+}
+
 pre { font-size: 83%; }
 kbd, code, textarea, input, select, button { font-size: 93%; }
 optgroup { font-style: normal; }

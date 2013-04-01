@@ -7,6 +7,8 @@
 
     <title><?php echo $title?></title>
 
+    <link rel="shortcut icon" type="image/x-icon" href="<?php echo $mediaURL?>favicon.ico">
+
     <?php
       $default = array('type' => 'text/css');
 
@@ -27,6 +29,7 @@
       <ul id="menu">
         <li class="sqobot">
           <a href="<?php echo Homepage?>" target="_blank">Sqobot</a>
+          <?php echo HLEx::span_q('v'.Version, 'version')?>
         </li>
         <?php
           foreach (cfgGroup('webMenu') as $caption => $url) {
