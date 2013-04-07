@@ -88,6 +88,8 @@ class Core {
   }
 
   // From http://proger.i-forge.net/Various_format_parsing_functions_for_PHP/ein.
+  // Modified to handle escaped '=' inside keys ('==' -> '=', '===' -> '==', etc.).
+  //
   //* $str string to parse
   //* $prefix string to prepend for every key in the returned array
   //* $unescape bool - if set \XX sequences will be converted to characters in value
@@ -103,7 +105,21 @@ class Core {
         $line = trim($line);
 
         if ($line !== '' and strpbrk($line[0], '#;') === false) {
-          @list($key, $value) = explode('=', $line, 2);
+          $parts = explode('=', $line);
+          $key = array_shift($parts);
+          $value = '';
+
+          foreach ($parts as $i => $part) {
+            if ($part === '') {
+              // an empty value part: 'key ='
+              if (!isset($parts[$i + 1])) { break; }
+            } elseif ($i and $parts[$i - 1] === '') {
+              $key .= "=$part";
+            } else {
+              $value = join('=', array_slice($parts, $i));
+              break;
+            }
+          }
 
           $key = rtrim($key);
           $value = ltrim($value);
