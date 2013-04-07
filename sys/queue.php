@@ -19,6 +19,7 @@ class Queue extends Row {
       $next = static::peekFree($site, $table);
 
       if (!$next) {
+        $site and $table .= "; site name = $site";
         log("No next free queue record in $table.");
         return;
       }

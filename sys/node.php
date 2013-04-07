@@ -101,6 +101,7 @@ class NodeCall extends Download {
   function header_user_agent() {
     $class = get_class($this);
     substr($class, 0, $len = strlen(NS)) === NS and $class = substr($class, $len);
-    return 'Sqobot v'.Version." $class";
+    Core::cli() or $class .= ' via web by '.(Web::user() ?: 'anonymous');
+    return 'Sqobot v'.VERSION." $class";
   }
 }

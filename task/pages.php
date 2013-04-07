@@ -85,8 +85,8 @@ class TaskPages extends Task {
         $sql .= "\n  (";
         $fromPages or array_unshift($row, $table);
 
-        foreach ($row as $i => &$value) {
-          $sql .= ($i > 0 ? ', ' : '').$db->quote($s);
+        foreach ($row as $i => $value) {
+          $sql .= ($i > 0 ? ', ' : '').$db->quote($value);
         }
 
         $sql .= '),';
@@ -233,7 +233,16 @@ class TaskPages extends Task {
 
     $table = S::pickFlat($args, 'table', cfg('dbPrefix').'pages');
 
-    $stmt = exec("SELECT COUNT(1) AS count FROM`$table`");
+    try {
+      $stmt = exec("SELECT COUNT(1) AS count FROM`$table`");
+    } catch (\Exception $e) {
+      if (S::starts($e->getMessage(), 'SQLSTATE[42S02]')) {
+        return print "Pages table $table doesn't exist.";
+      } else {
+        throw $e;
+      }
+    }
+
     $total = $stmt->fetch()->count;
     $stmt->closeCursor();
 

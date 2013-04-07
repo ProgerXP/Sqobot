@@ -2,8 +2,12 @@
 
 class TaskSql extends Task {
   function do_init(array $args = null) {
+    return $this->do_queue($args);
+  }
+
+  function do_queue(array $args = null) {
     if ($args === null) {
-      return print 'sql init [TABLE] --exec=0 --drop=0';
+      return print 'sql queue [TABLE] --exec=0 --drop=0';
     }
 
     $table = cfg('dbPrefix').opt(0, 'queue');
@@ -46,7 +50,7 @@ SQL;
     $sql = <<<SQL
 CREATE TABLE `$table` (
   `id` int UNSIGNED NOT NULL AUTO_INCREMENT,
-  `source` CHAR(100) NOT NULL,
+  `source` VARCHAR(100) NOT NULL,
   `site` VARCHAR(50) NOT NULL,
   `site_id` VARBINARY(16) NOT NULL,
   `created` DATETIME NOT NULL,
