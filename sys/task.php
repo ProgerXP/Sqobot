@@ -7,7 +7,7 @@ abstract class Task {
   //= array of str 'atoms', 'queue', ... suitable for factory()
   static function all($web = false) {
     $standard = S(glob(ROOT.'task/*.php', GLOB_NOESCAPE), array('.basename', '.php'));
-    $user = S(glob(ROOT.'user/[Tt]ask*.php', GLOB_NOESCAPE),
+    $user = S(glob(USER.'user/[Tt]ask*.php', GLOB_NOESCAPE),
               array('|', 'basename', array('.substr', 4, -4)));
     $tasks = array_unique(S::down(array_merge($standard, $user)));
 

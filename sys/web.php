@@ -229,8 +229,8 @@ class Web {
       throw new ENoTask("Unsafe web task name: [$task].");
     }
 
-    $file = ROOT."user/web-$task.php";
-    is_file($file) or $file = ROOT."web/$task.php";
+    $file = USER."user/web-$task.php";
+    is_file($file) or $file = USER."web/$task.php";
     return $file;
   }
 
@@ -246,7 +246,7 @@ class Web {
     $scripts = S(cfgGroup('webScript'), array(NS.'S.arrize', "src"));
 
     ob_start();
-    include ROOT.'web/page.html';
+    include USER.'web/page.html';
     return ob_get_clean();
   }
 

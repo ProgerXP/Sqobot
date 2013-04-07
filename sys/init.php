@@ -2,8 +2,9 @@
 
 define(__NAMESPACE__.'\\NS', __NAMESPACE__.'\\');
 defined(NS.'ROOT') or define(NS.'ROOT', dirname(__DIR__).'/');
-define(NS.'Version', '1.0a');
-define(NS.'Homepage', 'https://github.com/ProgerXP/Sqobot');
+defined(NS.'USER') or define(NS.'USER', ROOT);
+define(NS.'VERSION', '1.0a');
+define(NS.'HOMEPAGE', 'https://github.com/ProgerXP/Sqobot');
 
 error_reporting(-1);
 ini_set('display_errors', true);
@@ -27,8 +28,8 @@ spl_autoload_register(function ($class) {
     $lower = strtolower($short);
 
     $files = array(
-      ROOT."user/$short.php",
-      ROOT."user/$lower.php",
+      USER."user/$short.php",
+      USER."user/$lower.php",
       ROOT."sys/$lower.php",
     );
 
@@ -36,9 +37,13 @@ spl_autoload_register(function ($class) {
       $files[] = ROOT.'task/'.substr($lower, 4).'.php';
     }
   } else {
+    $lower = strtolower($class);
+
     $files = array(
       ROOT."lib/$class.php",
-      ROOT.'lib/'.strtolower($class).'.php',
+      ROOT."lib/$lower.php",
+      USER."user/$class.php",
+      USER."user/$lower.php",
     );
   }
 
@@ -110,16 +115,19 @@ if (Core::cli() and isset($argv)) {
   Core::$cl = S::parseCL($argv, true);
 }
 
-$chdir = opt('chdir', ROOT) and chdir($chdir);
+$chdir = opt('chdir', USER) and chdir($chdir);
 $delay = opt('delay') and usleep(1000 * ($delay + $delay / 3));
 
 Core::loadConfig('default.conf');
-Core::loadConfig(opt('config', 'main').'.conf');
+
+foreach ((array) opt('config', 'main') as $file) {
+  Core::loadConfig($file.'.conf');
+}
 
 foreach ((array) opt('cfg') as $config => $value) {
   Core::$config[$config] = $value;
 }
 
-if (is_file($user = ROOT.'user/init.php')) {
+if (is_file($user = USER.'user/init.php')) {
   include $user;
 }
