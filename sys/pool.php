@@ -24,8 +24,8 @@ class Pool extends Row {
     return toTimestamp($this->created);
   }
 
-  function create($ignore = false) {
-    parent::create($ignore);
+  function create($mode = '') {
+    parent::create($mode);
 
     if (PageIndex::enabled()) {
       $page = array(

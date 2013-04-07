@@ -36,6 +36,11 @@ class Row {
     return static::make($fields)->create();
   }
 
+  //= Row new entry
+  static function replaceWith($fields) {
+    return static::make($fields)->createOrReplace();
+  }
+
   static function make($fields = array()) {
     return new static($fields);
   }
@@ -61,16 +66,20 @@ class Row {
     return $this;
   }
 
-  function create($ignore = false) {
+  function create($mode = '') {
+    $mode = strtoupper($mode);
     $bind = $this->sqlFields();
     unset($bind['id']);
 
-    if (Atoms::enabled( $ignore ? 'createIgnore' : 'create' )) {
+    if (Atoms::enabled(__FUNCTION__)) {
       $id = Atoms::addRow($this, $bind);
     } else {
       list($fields, $bind) = S::divide($bind);
 
-      $sql = 'INSERT'.($ignore ? ' IGNORE' : '').' INTO `'.$this->table().'`'.
+      $verb = $mode;
+      $verb === 'REPLACE' or $verb = rtrim('INSERT '.$verb);
+
+      $sql = "$verb INTO `".$this->table().'`'.
              ' (`'.join('`, `', $fields).'`) VALUES'.
              ' ('.join(', ', S($bind, '"??"')).')';
 
@@ -82,7 +91,11 @@ class Row {
   }
 
   function createIgnore() {
-    return $this->create(true);
+    return $this->create('IGNORE');
+  }
+
+  function createOrReplace() {
+    return $this->create('REPLACE');
   }
 
   function update() {
