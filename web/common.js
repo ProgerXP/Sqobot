@@ -1,5 +1,5 @@
-// initialize Underscore.string.
-_.mixin(_.str.exports())
+// Initialize Underscore.string, if present.
+window._ && _.str && _.mixin(_.str.exports())
 
 $ && $(function () {
   $(document).ajaxError(function (event, xhr, settings, error) {

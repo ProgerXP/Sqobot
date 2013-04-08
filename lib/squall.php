@@ -807,7 +807,7 @@ class Functions {
       $i = 0;
       $item = end($v);
 
-      while ($i < count($v)) {
+      while (++$i <= count($v)) {
         if ($item === $delimiter) {
           return array(array_slice($v, 0, $i, true),
                        array_slice($v, $i + 1, count($v), true));
