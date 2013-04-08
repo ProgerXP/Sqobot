@@ -153,14 +153,25 @@ class Downwind {
   }
 
   function open() {
-    $f = $this->handle = fopen($this->url, 'rb', false, $this->createContext());
-    if (!$f) {
-      throw new RuntimeException("Cannot fopen({$this->url}).");
+    if (!$this->handle) {
+      $context = $this->createContext();
+      $this->handle = fopen($this->url, 'rb', false, $context);
+
+      $context and $this->opened($context, $this->handle);
+
+      if (!$this->handle) {
+        throw new RuntimeException("Cannot fopen({$this->url}).");
+      }
+
+      $this->responseHeaders = (array) stream_get_meta_data($this->handle);
     }
 
-    $this->responseHeaders = (array) stream_get_meta_data($f);
     return $this;
   }
+
+  //* $context resource of stream_context_create()
+  //* $file resource of fopen(), false if failed
+  protected function opened($context, $file = null) { }
 
   function read($limit = -1, $offset = -1) {
     $limit === -1 and $limit = PHP_INT_MAX;
@@ -175,7 +186,7 @@ class Downwind {
   }
 
   function close() {
-    $f = $this->handle and fclose($f);
+    $h = $this->handle and fclose($h);
     $this->handle = null;
     return $this;
   }
