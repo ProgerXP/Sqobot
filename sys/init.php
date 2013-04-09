@@ -132,6 +132,6 @@ if (is_file($user = USER.'user/init.php')) {
   include $user;
 }
 
-if (!date_default_timezone_set($tz = cfg('timeZone'))) {
+if ($tz = cfg('timeZone') and !date_default_timezone_set($tz)) {
   warn("Cannot set default timezone to $tz, using ".date_default_timezone_get().".");
 }

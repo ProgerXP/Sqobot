@@ -117,7 +117,12 @@ class TaskPages extends Task {
       }
 
       $stmt->closeCursor();
-      if (!$total and $fromPages) { $sql = ''; }
+
+      if (!$total and strpos($sql, 'DELETE FROM') === false) {
+        // keeping insertion of current time if this was the first batch INSERT.
+        $sql = '';
+      }
+
       echo $total, PHP_EOL;
     }
 
@@ -348,7 +353,14 @@ class TaskPages extends Task {
       $sql = "SELECT created FROM `$table`".
              " WHERE site = '' ORDER BY created LIMIT 1";
       $stmt = exec($sql);
-      $args['after'] = $stmt->fetch()->created;
+
+      if ($row = $stmt->fetch()) {
+        $args['after'] = $row->created;
+      } else {
+        echo 'No previous syncing date found - doing full sync.', PHP_EOL;
+        $args['after'] = '';
+      }
+
       $stmt->closeCursor();
     }
 
