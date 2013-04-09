@@ -168,7 +168,7 @@ abstract class Sqissor {
   //      // its instance by $this->extra().
   //
   function enqueue($url, $site, array $extra = array()) {
-    $item = Queue::make(compact('url', 'site'))
+    $item = Queue::make(Queue::hop($url, $site))
       ->extra($extra)
       ->createIgnore();
 

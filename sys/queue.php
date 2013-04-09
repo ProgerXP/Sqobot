@@ -104,6 +104,11 @@ class Queue extends Row {
     }
   }
 
+  static function hop($url, $site) {
+    Hop::tryAll($url, $site);
+    return S::listable(compact('url', 'site'));
+  }
+
   function defaults() {
     $this->created = new \DateTime;
     $this->error = '';

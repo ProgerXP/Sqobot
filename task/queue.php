@@ -11,10 +11,16 @@ class TaskQueue extends Task {
 
   function do_add(array $args = null) {
     if ($args === null or !opt(1)) {
-      return print 'queue add URL SITE --extra={json} --table=queue';
+      return print 'queue add SITE URL --extra={json} --exact --table=queue';
     }
 
-    $queue = Queue::make(array('url' => opt(0), 'site' => opt(1)));
+    if (empty($args['exact'])) {
+      $fields = Queue::hop(opt(1), opt(0));
+    } else {
+      $fields = array('url' => opt(1), 'site' => opt(0));
+    }
+
+    $queue = Queue::make($fields);
 
     if ($extra = &$args['extra']) {
       $extra = S::json("$extra", true);
@@ -27,12 +33,22 @@ class TaskQueue extends Task {
     }
 
     $queue->table = static::table($args);
-    $queue->create();
+    $queue->createIgnore();
 
-    echo "Created queue item #{$queue->id} in {$queue->table()} table.", PHP_EOL;
+    if ($queue->url !== opt(1)) {
+      echo 'Hopped to URL: '.$queue->url, PHP_EOL;
+    }
 
-    $extra and print 'Extra data attached:'.PHP_EOL.
-                     var_export($extra, true).PHP_EOL;
+    if (!$queue->id) {
+      echo 'This item is already in queue.', PHP_EOL;
+    } else {
+      echo "Created queue item #{$queue->id} in {$queue->table()} table.", PHP_EOL;
+
+      if ($extra) {
+        echo 'Extra data attached:', PHP_EOL,
+             var_export($extra, true), PHP_EOL;
+      }
+    }
   }
 
   function do_clear(array $args = null) {
@@ -65,8 +81,10 @@ class TaskQueue extends Task {
 
   function do_amend(array $args = null) {
     if ($args === null) {
-      return print 'queue amend [SITE] --table=queue'.PHP_EOL.
-                   'queue amend ID [ID [...]] --table=queue';
+      return print 'queue amend [SITE]'.PHP_EOL.
+                   'queue amend ID [ID [...]]'.PHP_EOL.
+                   PHP_EOL.
+                   '  --table=queue --like[]=%error-LIKE-OR_';
     }
 
     $table = static::table($args);
@@ -77,6 +95,12 @@ class TaskQueue extends Task {
       $sql .= ' WHERE '.static::idList(opt());
     } else {
       $site = opt(0) and $sql .= ' WHERE site = :site';
+    }
+
+    if ($like = &$args['like']) {
+      $sql .= ' AND ('.join(' OR ', S((array) $like, function ($expr) {
+        return "`error` LIKE ".db()->quote("%$expr%");
+      })).')';
     }
 
     $count = exec($sql, compact('site'));
@@ -181,7 +205,7 @@ class TaskQueue extends Task {
     usort($sites, function ($a, $b) { return strcmp($a->site, $b->site); });
 
     $sql = "SELECT COUNT(1) AS count FROM `$table` WHERE site = ? AND error != ''".
-           " AND error NOT LIKE 'Completed OK%'";
+           " AND error NOT LIKE 'Completed OK%' AND started IS NOT NULL";
     $stErrors = prep($sql);
 
     $sql = "SELECT COUNT(1) AS count FROM `$table` WHERE site = ? AND error = ''".
