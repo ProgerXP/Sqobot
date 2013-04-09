@@ -281,7 +281,63 @@ class TaskQueue extends Task {
     }
 
     echo 'Next queued item:', PHP_EOL, PHP_EOL;
-
     static::echoQueueInfo(new Queue($queue));
+  }
+
+  function do_url(array $args = null) {
+    if ($args === null) {
+      return print 'queue url [NAME [...]] --table=queue';
+    }
+
+    $table = static::table($args);
+    $all = Qurl::all(opt() ?: '');
+
+    if (!$all) {
+      return print "No matching 'qurl' options.";
+    }
+
+    foreach ($all as $name => $item) {
+      echo $name ?: $item, '... ';
+      $qurl = Qurl::parse($item);
+
+      echo $count = $qurl->countQueued($table), ' in queue',
+           ' (pool = ', $qurl->pool(), ')', PHP_EOL;
+
+      if ($count < $qurl->pool()) {
+        if ($count) {
+          $last = $qurl->lastQueued($table);
+          $page = $last ? (int) $qurl->pageFrom($last->url) : 0;
+          echo "  latest page = $page", PHP_EOL;
+        } else {
+          $page = $qurl->initial();
+        }
+
+        echo "  step = {$qurl->step()}", PHP_EOL;
+        $queued = array();
+
+        while (++$count <= $qurl->pool()) {
+          if (!$qurl->end() or $page <= $qurl->end()) {
+            $page += $qurl->step();
+          } elseif ($qurl->stops()) {
+            echo '  stopped at the end', PHP_EOL;
+            break;
+          } else {
+            $page = $qurl->initial();
+            echo "  wrapping to page $page", PHP_EOL;
+          }
+
+          $item = $qurl->enqueue($page, $table);
+          $queued[] = ($item ? '' : '_').$page;
+        }
+
+        if ($queued) {
+          $s = count($queued) == 1 ? '' : 's';
+          echo "  done, queued ", count($queued), " page$s: ",
+               join(' ', $queued), PHP_EOL;
+        }
+
+        echo PHP_EOL;
+      }
+    }
   }
 }
