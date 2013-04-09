@@ -197,7 +197,7 @@ abstract class Atom {
 class RowAtom extends Atom {
   public $class;
   public $fields;
-  public $opType;   //= str method name like 'create' or 'update'
+  public $opType;   //= str method name like 'create', 'createIgnore' or 'update'
 
   function __construct($class, array $fields, $opType = 'create') {
     $this->class = is_object($class) ? get_class($class) : $class;
@@ -206,12 +206,14 @@ class RowAtom extends Atom {
   }
 
   function code($id, array $known) {
+    $depends = array();
     $code = array("$$id = {$this->class}::{$this->opType}With(array(");
 
     foreach ($this->fields as $field => $value) {
       $key = sprintf('  %-23s => ', var_export($field, true));
 
       if (isset($known[$value])) {
+        $depends[] = "\$$value";
         $code[] = "$key\${$value}->id,";
       } else {
         $code[] = "$key".var_export($value, true).",";
@@ -219,6 +221,12 @@ class RowAtom extends Atom {
     }
 
     $code[] = '));';
+
+    if ($depends) {
+      $code = S::prefix($code, '  ');
+      array_unshift($code, join(' && ', $depends).' &&');
+    }
+
     return $code;
   }
 }

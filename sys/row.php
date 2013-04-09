@@ -31,16 +31,6 @@ class Row {
     return $count;
   }
 
-  //= Row new entry
-  static function createWith($fields) {
-    return static::make($fields)->create();
-  }
-
-  //= Row new entry
-  static function replaceWith($fields) {
-    return static::make($fields)->createOrReplace();
-  }
-
   static function make($fields = array()) {
     return new static($fields);
   }
@@ -66,20 +56,17 @@ class Row {
     return $this;
   }
 
-  function create($mode = '') {
-    $mode = strtoupper($mode);
+  // See create(), createWith(), createIgnore() and others.
+  protected function doCreate($method, $sqlVerb) {
     $bind = $this->sqlFields();
     unset($bind['id']);
 
-    if (Atoms::enabled(__FUNCTION__)) {
-      $id = Atoms::addRow($this, $bind);
+    if (Atoms::enabled('create')) {
+      $id = Atoms::addRow($this, $bind, $method);
     } else {
       list($fields, $bind) = S::divide($bind);
 
-      $verb = $mode;
-      $verb === 'REPLACE' or $verb = rtrim('INSERT '.$verb);
-
-      $sql = "$verb INTO `".$this->table().'`'.
+      $sql = "$sqlVerb INTO `".$this->table().'`'.
              ' (`'.join('`, `', $fields).'`) VALUES'.
              ' ('.join(', ', S($bind, '"??"')).')';
 
@@ -90,22 +77,15 @@ class Row {
     return $this;
   }
 
-  function createIgnore() {
-    return $this->create('IGNORE');
-  }
-
-  function createOrReplace() {
-    return $this->create('REPLACE');
-  }
-
-  function update() {
-    if (Atoms::enabled(__FUNCTION__)) {
-      $id = Atoms::addRow($this, $bind, __FUNCTION__);
+  // See update(), updateWith(), updateIgnore() and others.
+  protected function doUpdate($method, $sqlVerb) {
+    if (Atoms::enabled('update')) {
+      Atoms::addRow($this, $bind, $method);
     } else {
       $fields = S(static::$fields, '"`?` = ?"');
       $bind = array_values($this->sqlFields());
 
-      $sql = 'UPDATE `'.$this->table().'` SET `'.join(', ', $fields).
+      $sql = "$sqlVerb `".$this->table().'` SET `'.join(', ', $fields).
              ' WHERE site = :site AND site_id = :site_id';
       exec($sql, $bind);
     }
@@ -134,5 +114,59 @@ class Row {
     }
 
     return $result;
+  }
+
+  /*---------------------------------------------------------------------
+  | RECORD MANIPULATION VERBS
+  |--------------------------------------------------------------------*/
+
+  //= Row new entry
+  static function createWith($fields) {
+    return static::make($fields)->create();
+  }
+
+  //= Row new entry
+  static function createIgnoreWith($fields) {
+    return static::make($fields)->createIgnore();
+  }
+
+  //= Row new entry
+  static function createOrReplaceWith($fields) {
+    return static::make($fields)->createOrReplace();
+  }
+
+  //= Row updated entry
+  static function updateWith($fields) {
+    return static::make($fields)->update();
+  }
+
+  //= Row updated entry
+  static function updateIgnoreWith($fields) {
+    return static::make($fields)->updateIgnore();
+  }
+
+  //= $this
+  function create() {
+    return $this->doCreate(__FUNCTION__, 'INSERT');
+  }
+
+  //= $this
+  function createIgnore() {
+    return $this->doCreate(__FUNCTION__, 'INSERT IGNORE');
+  }
+
+  //= $this
+  function createOrReplace() {
+    return $this->doCreate(__FUNCTION__, 'REPLACE');
+  }
+
+  //= $this
+  function update() {
+    return $this->doUpdate(__FUNCTION__, 'UPDATE');
+  }
+
+  //= $this
+  function updateIgnore() {
+    return $this->doUpdate(__FUNCTION__, 'UPDATE IGNORE');
   }
 }

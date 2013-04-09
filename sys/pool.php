@@ -34,7 +34,7 @@ class Pool extends Row {
         'site_id'           => $this->site_id,
       );
 
-      PageIndex::make($page)->createIgnore();
+      PageIndex::createIgnoreWith($page);
     }
 
     return $this;

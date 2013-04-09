@@ -230,17 +230,17 @@ class TaskPages extends Task {
       exec("DELETE FROM `".PageIndex::tableName()."`".
            " WHERE `table` = ? AND `site` = ''", array($table));
 
-      PageIndex::make(array(
+      PageIndex::createIgnoreWith(array(
         'table'           => $table,
         'site'            => '',
         'site_id'         => time(),
         'created'         => new \DateTime,
-      ))->createIgnore();
+      ));
 
       $stmt = exec('SELECT site, site_id, created FROM `'.$table.'`');
 
       while ($row = $stmt->fetch(\PDO::FETCH_ASSOC)) {
-        PageIndex::make($row + compact('table'))->createIgnore();
+        PageIndex::createIgnoreWith($row + compact('table'));
       }
 
       $stmt->closeCursor();
