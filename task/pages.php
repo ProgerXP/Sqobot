@@ -30,7 +30,7 @@ class TaskPages extends Task {
     if ($args === null or !opt(0)) {
       return print 'pages pack [*]TABLE [...]'.PHP_EOL.
                    '  --out[=out/pages.sql] --over --zip'.PHP_EOL.
-                   '  --batch=15000';
+                   '  --batch=15000 --after=20.10.2013|timestamp';
     }
 
     if (!empty($args['zip']) and $error = static::prereq()) { return $error; }
@@ -38,6 +38,16 @@ class TaskPages extends Task {
     $batch = S::pickFlat($args, 'batch', 15000);
     $dest = S::pickFlat($args, 'out', 'out/pages.sql');
     S::mkdirOf($dest);
+
+    $after = S::pickFlat($args, 'after');
+    is_numeric($after) or $after = strtotime("$after");
+
+    if ($after) {
+      $after = S::sqlDateTime($after);
+    } elseif (!empty($args['after'])) {
+      echo "Cannot recognize --after value [$args[after]] - ignoring criteria.",
+           PHP_EOL;
+    }
 
     $destCheck = empty($args['zip']) ? $dest : S::newExt($dest, '.zip');
     if (file_exists($destCheck) and empty($args['over'])) {
@@ -49,18 +59,25 @@ class TaskPages extends Task {
     $db = db();
 
     $flush = function ($table = null, $withTime = true)
-                  use (&$count, &$sql, $h, $db) {
+                  use (&$count, &$sql, $h, $db, $after) {
       $count = 0;
       $sql and fwrite($h, substr($sql, 0, -1).";\n\n");
 
-      $sql = "INSERT IGNORE INTO `%TABLE%` (`table`, `site`, `site_id`) VALUES";
+      $sql = "INSERT IGNORE INTO `%TABLE%`".
+             " (`table`, `site`, `site_id`, `created`) VALUES";
 
       if ($table and $withTime) {
-        $sql = "-- Pages of $table --\n\n".
-               "DELETE FROM `%TABLE%` WHERE `table` = ".
+        $sql = "DELETE FROM `%TABLE%` WHERE `table` = ".
                $db->quote($table)." AND `site` = '';\n\n".
-               "$sql\n".
-               "  (".$db->quote($table).", '', ".time()."),";
+               "$sql\n";
+
+        $now = $db->quote(S::sqlDateTime(time()));
+        $sql .= "  (".$db->quote($table).", '', ".time().", $now),";
+      }
+
+      if ($table) {
+        $after = $after ? " after $after" : '';
+        $sql = "-- Pages of $table$after --\n\n$sql";
       }
     };
 
@@ -78,10 +95,15 @@ class TaskPages extends Task {
       $total = 0;
 
       echo $table, '... ';
+
       $col = $fromPages ? '`table`, ' : '';
-      $stmt = exec("SELECT {$col}site, site_id FROM `$table`");
+      $sourceSQL = "SELECT {$col}site, site_id, created FROM `$table`";
+      $after and $sourceSQL .= " WHERE `created` > :after";
+      $stmt = exec($sourceSQL, compact('after'));
 
       while ($row = $stmt->fetch(\PDO::FETCH_NUM)) {
+        if ($fromPages and "$row[1]" === '') { continue; }
+
         $sql .= "\n  (";
         $fromPages or array_unshift($row, $table);
 
@@ -95,7 +117,7 @@ class TaskPages extends Task {
       }
 
       $stmt->closeCursor();
-      $total or $sql = '';
+      if (!$total and $fromPages) { $sql = ''; }
       echo $total, PHP_EOL;
     }
 
@@ -200,13 +222,17 @@ class TaskPages extends Task {
     foreach (opt() as $table) {
       echo $table, '...', PHP_EOL;
 
+      exec("DELETE FROM `".PageIndex::tableName()."`".
+           " WHERE `table` = ? AND `site` = ''", array($table));
+
       PageIndex::make(array(
         'table'           => $table,
         'site'            => '',
         'site_id'         => time(),
+        'created'         => new \DateTime,
       ))->createIgnore();
 
-      $stmt = exec('SELECT site, site_id FROM `'.$table.'`');
+      $stmt = exec('SELECT site, site_id, created FROM `'.$table.'`');
 
       while ($row = $stmt->fetch(\PDO::FETCH_ASSOC)) {
         PageIndex::make($row + compact('table'))->createIgnore();
@@ -308,7 +334,7 @@ class TaskPages extends Task {
     if ($args === null or !opt(0)) {
       echo 'pages sync TABLE [...]'.
            ' - accepts all parameters of `pages pack`, plus:', PHP_EOL,
-           '  --nodes=node,node,... --keep', PHP_EOL, PHP_EOL;
+           '  --nodes=node,node,... --keep --after=last', PHP_EOL, PHP_EOL;
       $pager->call('pack', null);
       return;
     } elseif ($error = static::prereq()) {
@@ -316,6 +342,15 @@ class TaskPages extends Task {
     }
 
     $zip = new \ZipArchive;
+
+    if (S::pickFlat($args, 'after', 'last') === 'last') {
+      $table = S::pickFlat($args, 'table', cfg('dbPrefix').'pages');
+      $sql = "SELECT created FROM `$table`".
+             " WHERE site = '' ORDER BY created LIMIT 1";
+      $stmt = exec($sql);
+      $args['after'] = $stmt->fetch()->created;
+      $stmt->closeCursor();
+    }
 
     $main = S::pickFlat($args, 'out', 'out/pages.sql');
     $pager->call('pack', $args);
@@ -340,7 +375,7 @@ class TaskPages extends Task {
       $time = microtime(true);
 
       $data = $node->call('pages-pack')
-        ->addQuery(array('tables' => '*', 'zip' => 1))
+        ->addQuery(array('tables' => '*', 'zip' => 1, 'after' => $args['after']))
         ->fetchData();
 
       echo round(microtime(true) - $time, 1).' sec; ';
@@ -376,7 +411,7 @@ class TaskPages extends Task {
     echo PHP_EOL;
 
     Core::$cl['index'][0] = $main;
-    $this->do_unpack(array('keep' => true) + $args);
+    $this->do_unpack(array('keep' => true, 'merge' => !!$args['after']) + $args);
 
     if (!is_string($main = static::packZIP($main))) {
       return;
@@ -390,6 +425,7 @@ class TaskPages extends Task {
 
       $log = $node->call('pages-unpack')
         ->addQuery('zip')
+        ->addQuery('merge', !!$args['after'])
         ->upload('pages', 'pages.zip', fopen($main, 'rb'))
         ->fetchData();
 

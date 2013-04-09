@@ -1,9 +1,9 @@
 <?php namespace Sqobot;
 
 class PageIndex extends Row {
-  static $fields = array('table', 'site', 'site_id');
+  static $fields = array('table', 'site', 'site_id', 'created');
 
-  public $site, $site_id;
+  public $site, $site_id, $created;
 
   static function enabled() {
     return !!static::$defaultTable;
@@ -15,6 +15,10 @@ class PageIndex extends Row {
 
   function table($new = null) {
     return static::tableName();
+  }
+
+  function created() {
+    return toTimestamp($this->created);
   }
 }
 
