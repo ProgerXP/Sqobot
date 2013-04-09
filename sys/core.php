@@ -260,13 +260,17 @@ function db() {
   if (!Core::$pdo) {
     $pdo = Core::$pdo = new PDO(cfg('dbDSN'), cfg('dbUser'), cfg('dbPassword'));
 
-    $charset = cfg('dbConCharset') and $pdo->exec('SET NAMES '.$charset);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $pdo->setAttribute(PDO::ATTR_AUTOCOMMIT, true);
     $pdo->setAttribute(PDO::ATTR_CASE, PDO::CASE_NATURAL);
     $pdo->setAttribute(PDO::ATTR_ORACLE_NULLS, PDO::NULL_NATURAL);
     $pdo->setAttribute(PDO::ATTR_STRINGIFY_FETCHES, false);
     $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_OBJ);
+
+    $charset = cfg('dbConCharset') and $pdo->exec('SET NAMES '.$pdo->quote($charset));
+
+    $tz = cfg('dbConTimeZone') ?: getTzOffset();
+    $pdo->exec('SET time_zone='.$pdo->quote($tz));
   }
 
   return Core::$pdo;
@@ -369,6 +373,15 @@ function toTimestamp($time) {
 function timeTag($text, $time = null) {
   $time or $time = time();
   return HLEx::time($text, $time, array('title' => S::sqlDateTime($time)));
+}
+
+// Taken from http://www.sitepoint.com/synchronize-php-mysql-timezone-configuration.
+function getTzOffset(\DateTime $date = null) {
+  $date or $date = new \DateTime();
+  $min = abs($date->getOffset() / 60);
+  $hour = floor($min / 60);
+  $min -= $hour * 60;
+  return sprintf('%+d:%02d', $hour * ($min < 0 ? -1 : 1), $min);
 }
 
 //= DOMDocument
