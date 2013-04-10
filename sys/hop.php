@@ -4,6 +4,7 @@ class Hop {
   // Must be in order so that longer operators go before their prefixes, e.g.
   // '<>' must go before '<' or the latter will match instead of '<>'.
   static $operators = array('=', '<>', '>=', '<=', '>', '<');
+  static $maxRewrites = 20;
 
   //= null when not initialized by all(), hash of Hop
   static $all;
@@ -25,20 +26,26 @@ class Hop {
 
   //= bool
   static function tryAll(&$url, &$site) {
+    $original = $url;
+    $seen = array();  // array of array(count_met, pattern)
+
     do {
       $restart = false;
-      $seen = array();
 
       foreach (static::all() as $i => $hop) {
         $new = $hop->rewrite($url, $site);
 
         if (isset($new)) {
-          if (isset($seen[$i])) {
-            $msg = "Curricular hopping while rewriting page in [$url] of site [$site]:".
-                   join(' -> ', $seen)." -> {$hop->pattern}.";
-            warn($msg);
+          if (isset($seen[$i]) and $seen[$i][0] >= static::$maxRewrites) {
+            $msg = "Curricular hopping while rewriting [$original] of site [$site],".
+                   " resulting URL: [$url] - giving up and using original. Trace: ";
+            foreach ($seen as $item) { $msg .= "$item[1] ($item[0] calls) -> "; }
+            warn("$msg{$hop->pattern}.");
+
+            $url = $original;
           } else {
-            $seen[$i] = $hop->pattern;
+            isset($seen[$i]) or $seen[$i] = array(0, $hop->pattern);
+            ++$seen[$i][0];
             $url = $new;
             $restart = true;
           }
@@ -48,7 +55,7 @@ class Hop {
       }
     } while ($restart);
 
-    return func_get_arg(0) !== $url;
+    return $url !== $original;
   }
 
   //= hash of Hop
@@ -81,7 +88,7 @@ class Hop {
   function pattern($new = null) {
     if (func_num_args()) {
       $new = trim($new);
-      $new === '' and $new = '\d+/?$';
+      $new === '' and $new = '(?<=\D)\d+/?$';
       $new[0] === '~' or $new = "~$new~";
       $this->pattern = $new;
       return $this;

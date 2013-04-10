@@ -329,7 +329,24 @@ class TaskQueue extends Task {
           }
 
           $item = $qurl->enqueue($page, $table);
-          $queued[] = ($item ? '' : '_').$page;
+
+          $status = $page;
+
+          if (!$item->id) {
+            $status = "_$status";
+            --$count;
+          }
+
+          if ($item->url !== $qurl->makeURL($page)) {
+            $hoppedTo = $qurl->pageFrom($item->url);
+
+            if (isset($hoppedTo)) {
+              $status .= "->$hoppedTo";
+              $page = $hoppedTo;
+            }
+          }
+
+          $queued[] = $status;
         }
 
         if ($queued) {

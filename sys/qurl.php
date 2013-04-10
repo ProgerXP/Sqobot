@@ -114,7 +114,7 @@ class Qurl {
   }
 
   function countQueued($table = null) {
-    $stmt = $this->fetchQueued('AND started IS NULL', 'COUNT(1) AS count', $table);
+    $stmt = $this->fetchQueued('', 'COUNT(1) AS count', $table);
     $row = $stmt->fetch();
     $stmt->closeCursor();
     return $row->count;
@@ -127,12 +127,12 @@ class Qurl {
     return exec($sql, array($this->site, $url));
   }
 
+  //= Queue with $id set to 0 if URL is already enqueued
   function enqueue($page, $table = null) {
     $fields = Queue::hop($this->makeURL($page), $this->site);
     $item = new Queue($fields);
     $table and $item->table = $table;
-    $item->createIgnore();
-    return $item->id ? $item : null;
+    return $item->createIgnore();
   }
 
   function pageFrom($url) {
