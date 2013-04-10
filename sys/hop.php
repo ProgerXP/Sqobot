@@ -147,8 +147,10 @@ class Hop {
       });
 
       $new = $this->changePage((int) $page);
+
       if (isset($new)) {
-        return substr($url, 0, $offset).$new.substr($url, $offset + strlen($page));
+        $pageLength = $offset + strlen((int) $page);
+        return substr($url, 0, $offset).$new.substr($url, $pageLength);
       }
     }
   }

@@ -309,14 +309,16 @@ class TaskQueue extends Task {
           $page = $last ? (int) $qurl->pageFrom($last->url) : 0;
           echo "  latest page = $page", PHP_EOL;
         } else {
-          $page = $qurl->initial();
+          $page = null;
         }
 
         echo "  step = {$qurl->step()}", PHP_EOL;
         $queued = array();
 
         while (++$count <= $qurl->pool()) {
-          if (!$qurl->end() or $page <= $qurl->end()) {
+          if ($page === null) {
+            $page = $qurl->initial();
+          } elseif (!$qurl->end() or $page <= $qurl->end()) {
             $page += $qurl->step();
           } elseif ($qurl->stops()) {
             echo '  stopped at the end', PHP_EOL;
