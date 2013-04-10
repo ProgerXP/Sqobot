@@ -90,19 +90,21 @@ class TaskQueue extends Task {
     $table = static::table($args);
 
     $sql = 'UPDATE `'.$table.'` SET started = NULL';
+    $where = array();
 
     if (is_numeric(opt(0))) {
-      $sql .= ' WHERE '.static::idList(opt());
+      $where[] = static::idList(opt());
     } else {
-      $site = opt(0) and $sql .= ' WHERE site = :site';
+      $site = opt(0) and $where[] = 'site = :site';
     }
 
     if ($like = &$args['like']) {
-      $sql .= ' AND ('.join(' OR ', S((array) $like, function ($expr) {
+      $where[] = '('.join(' OR ', S((array) $like, function ($expr) {
         return "`error` LIKE ".db()->quote("%$expr%");
       })).')';
     }
 
+    $where and $sql .= ' WHERE '.join(' AND ', $where);
     $count = exec($sql, compact('site'));
 
     if ($count) {
@@ -329,7 +331,6 @@ class TaskQueue extends Task {
           }
 
           $item = $qurl->enqueue($page, $table);
-
           $status = $page;
 
           if (!$item->id) {
