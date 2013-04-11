@@ -28,8 +28,8 @@ class Download extends \Downwind {
       }
 
       $flags = array();
-      $meta['eof'] and $flags[] = 'At EOF';
-      $meta['timed_out'] and $flags[] = 'Timed out';
+      empty($meta['eof']) or $flags[] = 'At EOF';
+      empty($meta['timed_out']) or $flags[] = 'Timed out';
       $flags and $result .= '  State: '.join(', ', $flags)."\n";
 
       if ($filters or $flags) { $result .= "\n"; }
@@ -50,29 +50,38 @@ class Download extends \Downwind {
       }
 
       ksort($options);
-
-      $options = S($options, function ($value) {
-        return is_scalar($value) ? var_export($value, true) : gettype($value);
-      });
-
       $result .= "Context options:\n\n".static::joinIndent($options)."\n\n";
     }
 
-    if ($meta and $headers = $meta['wrapper_data']) {
-      // typically response headers for HTTP requests.
-      $result .= "Response:\n\n".static::joinHeaders($headers)."\n";
+    if ($data = &$meta['wrapper_data']) {
+      isset($data['headers']) and $data = $headers['headers'];
+      $data and $result .= "Response:\n\n".static::joinHeaders($data)."\n";
     }
 
     return $result;
   }
 
   static function joinHeaders(array $list, $indent = '  ') {
-    $list = S::trim(S::keys($list, array('.*explode*', ':', 2)));
-    return static::joinIndent($list, $indent);
+    $keyValues = array();
+
+    foreach ($list as $value) {
+      if (!is_string($value) or strrchr($value, ':') === false) {
+        $keyValues[] = $value;
+      } else {
+        $keyValues[strtok($value, ':')] = trim(strtok(null));
+      }
+    }
+
+    return static::joinIndent($keyValues, $indent);
   }
 
   static function joinIndent(array $keyValues, $indent = '  ') {
-    $length = max(S($keyValues, '#strlen#')) + 4;
+    $length = 0;
+
+    foreach ($keyValues as $key => &$value) {
+      $length = max($length, strlen($key) + 4);
+      $value = is_scalar($value) ? var_export($value, true) : gettype($value);
+    }
 
     return join("\n", S($keyValues, function ($value, $key) use ($indent, $length) {
       return $indent.str_pad("$key:", $length)."$value";
