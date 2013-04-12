@@ -353,7 +353,46 @@ function prep($sql, $bind = array()) {
     $stmt->bindValue($name, $value, $type);
   }
 
+  dbLog($sql, $bind);
   return $stmt;
+}
+
+function dbLog($sql, array $bind = array()) {
+  static $first = true;
+
+  if ($log = strftime( opt('dbLog', cfg('dbLog')) )) {
+    $lastIndexPos = 0;
+
+    foreach ($bind as $name => $value) {
+      if (is_int($name)) {
+        $lastIndexPos = $pos = strpos($sql, '?', $lastIndexPos);
+        $length = 1;
+      } else {
+        $pos = strpos($sql, ":$name");
+        $length = strlen($name) + 1;
+      }
+
+      $value = var_export($value, true);
+
+      if ($pos !== false) {
+        $sql = substr($sql, 0, $pos).$value.substr($sql, $pos + 1);
+        $lastIndexPos <= $pos and $lastIndexPos += strlen($value);
+      }
+    }
+
+    if (is_file($log)) {
+      if (filesize($log) >= S::size(cfg('dbLogMax'))) {
+        file_put_contents($log, '', LOCK_EX);
+      } elseif ($first) {
+        $sql = "\n$sql";
+      }
+    }
+
+    $first = false;
+    S::mkdirOf($log);
+    $ok = file_put_contents($log, "$sql;\n", LOCK_EX | FILE_APPEND);
+    $ok or warn("Cannot write to dbLog file [$log].");
+  }
 }
 
 //= int last insert ID for INSERTs, PDOStatement for others
