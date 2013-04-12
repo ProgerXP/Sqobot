@@ -1350,56 +1350,60 @@ class Utils extends Functions {
   //? parseCL(array('--arr[]=1''), true)
   //    // 'options' is array('arr' => array('1'))
   static function parseCL($args, $arrays = array()) {
-      $arrays === true or $arrays = array_flip($arrays);
-      $flags = $options = $index = array();
+    $arrays === true or $arrays = array_flip($arrays);
+    $flags = $options = $index = array();
 
-      foreach ($args as $i => &$arg) {
-        if ($arg !== '') {
-          if ($arg[0] == '-') {
-            if ($arg === '--') {
-              $index = array_merge($index, array_slice($args, $i + 1));
-              break;
-            } elseif ($argValue = ltrim($arg, '-')) {
-              if ($arg[1] == '-') {
-                if (strrchr($argValue, '=') === false) {
-                  $key = $argValue;
-                  $value = true;
-                } else {
-                  list($key, $value) = explode('=', $argValue, 2);
-                }
+    foreach ($args as $i => &$arg) {
+      if ($arg === '') {
+        // skip
+      } elseif ($arg === '--') {
+        // '--' - stop parsing arguments
+        $index = array_merge($index, array_slice($args, $i + 1));
+        break;
+      } elseif ($arg[0] !== '-') {
+        // 'some value'
+        $index[] = $arg;
+      } elseif (rtrim($arg, '-') === '') {
+        // skip series of dashes
+      } elseif ($arg[1] !== '-') {
+        // -flags
+        $flags += array_flip( str_split(substr($arg, 1)) );
+      } else {
+        $argValue = substr($arg, 2);
 
-                $key = strtolower($key);
+        if (strrchr($argValue, '=') === false) {
+          // --option
+          $key = $argValue;
+          $value = true;
+        } else {
+          // --option=value
+          list($key, $value) = explode('=', $argValue, 2);
+        }
 
-                if (preg_match('/^(.+)\[(.*)\]$/', $key, $matches)) {
-                  list(, $key, $subKey) = $matches;
-                } else {
-                  $subKey = null;
-                }
+        if (preg_match('/^(.+)\[(.*)\]$/', $key, $matches)) {
+          // --option[array]
+          list(, $key, $subKey) = $matches;
+        } else {
+          $subKey = null;
+        }
 
-                if ($subKey !== null and ($arrays === true or isset( $arrays[$key] ))) {
-                  if (isset( $options[$key] ) and !is_array( $options[$key] )) {
-                    $options[$key] = array($options[$key]);
-                  }
-
-                  $subKey === '' ? $options[$key][] = $value
-                                 : $options[$key][$subKey] = $value;
-                } else {
-                  isset( $arrays[$key] ) and $value = array($value);
-                  $options[$key] = $value;
-                }
-              } else {
-                $flags += array_flip( str_split($argValue) );
-              }
-            }
-          } else {
-            $index[] = $arg;
+        if ($subKey !== null and ($arrays === true or isset( $arrays[$key] ))) {
+          if (isset( $options[$key] ) and !is_array( $options[$key] )) {
+            $options[$key] = array($options[$key]);
           }
+
+          $subKey === '' ? $options[$key][] = $value
+                         : $options[$key][$subKey] = $value;
+        } else {
+          isset( $arrays[$key] ) and $value = array($value);
+          $options[$key] = $value;
         }
       }
-
-      $flags = static::combine(array_keys($flags), true);
-      return compact('flags', 'options', 'index');
     }
+
+    $flags = static::combine(array_keys($flags), true);
+    return compact('flags', 'options', 'index');
+  }
 
   static function expandSymlinks($path, $cwd = null) {
     return static::followSymlinks(static::expand($path, $cwd));
@@ -1456,6 +1460,10 @@ class Utils extends Functions {
     }
 
     return $path;
+  }
+
+  static function wildcard($str, $pattern) {
+    return fnmatch($pattern, $str, FNM_NOESCAPE | FNM_PATHNAME | FNM_CASEFOLD);
   }
 
   static function isBinary($data, $preview = 512) {

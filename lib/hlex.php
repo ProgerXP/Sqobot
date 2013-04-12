@@ -145,6 +145,31 @@ class HLEx {
     return static::wrap_if('select', $result, $attrs);
   }
 
+  // Builds a list of <input type="hidden"> inputs according to a query.
+  //* $query hash, str a=b&c=...
+  //* $prefix str - is prepended to inputs' name.
+  //* $xhtml - whether to add '/>' or not.
+  //= str HTML
+  static function hiddens($query, $prefix = '', $xhtml = false) {
+    is_string($query) and parse_str($query, $query);
+
+    if (is_array($query)) {
+      foreach ($query as $name => &$value) {
+        if (is_array($value)) {
+          $name = "$prefix" === '' ? $name : $prefix."[$name]";
+          $value = static::hiddens($value, $name, $xhtml);
+        } else {
+          "$prefix" === '' or $name = $prefix."[$name]";
+          $type = 'hidden';
+          $value = static::tag('input', compact('name', 'value', 'type'));
+          $xhtml and $value = substr($value, 0, -1).' />';
+        }
+      }
+
+      return join("\n", $query);
+    }
+  }
+
   // Builds a set of checkboxes wrapped in labels.
   //= str HTML
   static function checkboxes($name, array $checkboxes = null, $checked = array()) {
