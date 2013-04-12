@@ -192,7 +192,7 @@ class TaskQueue extends Task {
     $table = static::table($args);
 
     $sql = "SELECT site, COUNT(1) AS count, MIN(id) AS min, MAX(id) AS max".
-           " FROM`$table` GROUP BY site";
+           " FROM `$table` GROUP BY site";
     $stmt = exec($sql);
     $sites = $stmt->fetchAll();
     $stmt->closeCursor();
@@ -302,7 +302,7 @@ class TaskQueue extends Task {
       echo $name ?: $item, '... ';
       $qurl = Qurl::parse($item);
 
-      echo $count = $qurl->countQueued($table), ' in queue',
+      echo $count = $qurl->countQueued(false, $table), ' in queue',
            ' (pool = ', $qurl->pool(), ')', PHP_EOL;
 
       if ($count < $qurl->pool()) {

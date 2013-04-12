@@ -113,8 +113,9 @@ class Qurl {
     return $row;
   }
 
-  function countQueued($table = null) {
-    $stmt = $this->fetchQueued('', 'COUNT(1) AS count', $table);
+  function countQueued($withFailed, $table = null) {
+    $withFailed = $withFailed ? '' : 'AND started IS NULL';
+    $stmt = $this->fetchQueued($withFailed, 'COUNT(1) AS count', $table);
     $row = $stmt->fetch();
     $stmt->closeCursor();
     return $row->count;
