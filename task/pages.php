@@ -265,7 +265,7 @@ class TaskPages extends Task {
     $table = S::pickFlat($args, 'table', cfg('dbPrefix').'pages');
 
     try {
-      $stmt = exec("SELECT COUNT(1) AS count FROM`$table`");
+      $stmt = exec("SELECT COUNT(1) AS count FROM `$table`");
     } catch (\Exception $e) {
       if (S::starts($e->getMessage(), 'SQLSTATE[42S02]')) {
         return print "Pages table $table doesn't exist.";
@@ -294,7 +294,7 @@ class TaskPages extends Task {
     $stTimes = prep("SELECT site_id FROM $table WHERE `table` = ? AND site = ''");
 
     $sql = "SELECT site, COUNT(1) AS count, MIN(site_id) AS min, MAX(site_id) AS max".
-           " FROM`$table` WHERE `table` = ? AND site != '' GROUP BY site";
+           " FROM `$table` WHERE `table` = ? AND site != '' GROUP BY site";
     $stSites = prep($sql);
 
     foreach ($tables as $i => $table) {
