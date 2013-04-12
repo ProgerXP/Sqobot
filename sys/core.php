@@ -375,7 +375,7 @@ function dbLog($sql, array $bind = array()) {
       $value = var_export($value, true);
 
       if ($pos !== false) {
-        $sql = substr($sql, 0, $pos).$value.substr($sql, $pos + 1);
+        $sql = substr($sql, 0, $pos).$value.substr($sql, $pos + $length);
         $lastIndexPos <= $pos and $lastIndexPos += strlen($value);
       }
     }

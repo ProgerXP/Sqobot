@@ -10,7 +10,15 @@ class Node {
 
   static function exists($name = null) {
     $all = static::all();
-    return isset($name) ? isset($all[$name]) : !empty($name);
+    return isset($name) ? isset($all[$name]) : !empty($all);
+  }
+
+  static function get($name) {
+    if ($node = S::pickFlat(static::all(), $name)) {
+      return $node;
+    } else {
+      throw new Error("Node [$name] is undefined.");
+    }
   }
 
   //= hash of Node by 'name'

@@ -245,8 +245,15 @@ class Web {
     $styles = S(cfgGroup('webStyle'), array(NS.'S.arrize', "href"));
     $scripts = S(cfgGroup('webScript'), array(NS.'S.arrize', "src"));
 
+    $vars = compact('content', 'title', 'mediaURL', 'styles', 'scripts');
+    return static::template('page', $vars);
+  }
+
+  static function template($_name, array $_vars) {
+    extract($_vars, EXTR_SKIP);
+
     ob_start();
-    include USER.'web/page.html';
+    include USER."web/$_name.html";
     return ob_get_clean();
   }
 
