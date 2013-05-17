@@ -8,7 +8,9 @@ Can work without database or with only a partial database, offloading new entrie
 
 Sqobot is specifically focused on stability and maximum independence from human interaction (apart from main _node_). It has sophisticated error logging/reporting and transaction mechanisms.
 
-Licensed in public domain. http://proger.me.
+Licensed in public domain. Uses [MiMeil](https://github.com/ProgerXP/MiMeil) for message delivery and [Squall](https://github.com/ProgerXP/Squall) for concise & functional PHP programming.
+
+Visit author's homepage at http://proger.me. 
 
 ## Basic concepts 
 
