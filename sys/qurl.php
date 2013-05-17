@@ -107,7 +107,9 @@ class Qurl {
   }
 
   function lastQueued($table = null) {
-    $stmt = $this->fetchQueued("ORDER BY created DESC, id DESC LIMIT 1", '*', $table);
+    // first sort on `id` because `created` DATETIME is really inconsistent - I had
+    // no luck tracking down what messes it up (apparently some TZ clash).
+    $stmt = $this->fetchQueued("ORDER BY id DESC, created DESC LIMIT 1", '*', $table);
     $row = $stmt->fetch();
     $stmt->closeCursor();
     return $row;

@@ -72,7 +72,7 @@ hook('class MiMeil', function () {
     return fire("mail $event", $args);
   };
 
-  \MiMeil::RegisterEventsUsing(function ($event, $callback) {
+  \MiMeil::registerEventsUsing(function ($event, $callback) {
     hook("mail $event", $callback);
   });
 });
