@@ -1462,8 +1462,10 @@ class Utils extends Functions {
     return $path;
   }
 
-  static function wildcard($str, $pattern) {
-    return fnmatch($pattern, $str, FNM_NOESCAPE | FNM_PATHNAME | FNM_CASEFOLD);
+  static function wildcard($str, $pattern, $caseSensitive = true) {
+    $caseSensitive = $caseSensitive ? 0 : FNM_CASEFOLD;
+    $flags = $caseSensitive | FNM_NOESCAPE | FNM_PATHNAME | FNM_PERIOD;
+    return fnmatch($wildcard, $str, $flags);
   }
 
   static function isBinary($data, $preview = 512) {

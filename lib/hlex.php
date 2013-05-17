@@ -1,4 +1,7 @@
 <?php namespace Px;
+/*
+  Part of Plarx | http://proger.i-forge.net/Plarx
+*/
 
 class HLEx {
   static $removeEmptyAttributes = array('class', 'style');
@@ -126,19 +129,25 @@ class HLEx {
     $result = '';
 
     foreach ((array) $options as $label => $options) {
-      if ($optgroup = is_array($options)) {
+      if ($isOptgroup = is_array($options)) {
         $result .= static::tag('optgroup', compact('label'));
       } else {
         $options = array($label => $options);
       }
 
       foreach ($options as $value => $label) {
-        is_array($value) or $value = compact('value');
-        $value['value'] == $selected and $value['selected'] = 'selected';
-        $result .= static::wrap_q('option', $label, $value);
+        if (is_array($label)) {
+          $attrs = array_except($label, 'label') + compact('value');
+          $label = &$label['label'];
+        } else {
+          $attrs = compact('value');
+        }
+
+        $attrs['value'] == $selected and $attrs['selected'] = 'selected';
+        $result .= static::wrap_q('option', $label, $attrs);
       }
 
-      $optgroup and $result .= '</optgroup>';
+      $isOptgroup and $result .= '</optgroup>';
     }
 
     $attrs += compact('name');
@@ -146,12 +155,15 @@ class HLEx {
   }
 
   // Builds a list of <input type="hidden"> inputs according to a query.
-  //* $query hash, str a=b&c=...
+  //* $query hash, str [...?]a=b&c=...
   //* $prefix str - is prepended to inputs' name.
   //* $xhtml - whether to add '/>' or not.
   //= str HTML
   static function hiddens($query, $prefix = '', $xhtml = false) {
-    is_string($query) and parse_str($query, $query);
+    if (is_string($query)) {
+      $queryStr = strrchr($query, '?') and $query = substr($queryStr, 1);
+      parse_str($query, $query);
+    }
 
     if (is_array($query)) {
       foreach ($query as $name => &$value) {
