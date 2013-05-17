@@ -12,6 +12,8 @@ class TaskWeblog extends Task {
   }
 
   function do_(array $args = null) {
+    static $entrySize = 4096;
+
     echo Web::run('log-list', $title);
     $current = logFile();
 
@@ -20,14 +22,22 @@ class TaskWeblog extends Task {
       $current = dirname($current)."/$query";
     }
 
-    if (is_file($current)) {
-      $entries = explode("\n\n", file_get_contents($current));
-      $entries = array_filter(S::trim($entries));
-    } else {
+    $max = S::pickFlat($args, 'max', $query ? null : 20);
+
+    if (!is_file($current)) {
       $entries = array();
+    } elseif (!$max or filesize($current) <= $readBack = $entrySize * $max) {
+      $entries = explode("\n\n", file_get_contents($current));
+    } else {
+      $h = fopen($current, 'rb');
+      fseek($h, -$readBack, \SEEK_END);
+      $entries = fread($h, $readBack);
+      fclose($h);
+
+      $entries = explode("\n\n", $entries);
     }
 
-    $max = S::pickFlat($args, 'max', $query ? count($entries) : 20);
+    $entries = array_filter(S::trim($entries));
 
     if ($entries) {
       $remaining = count($entries) - $max;
