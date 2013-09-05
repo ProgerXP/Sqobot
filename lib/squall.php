@@ -1,7 +1,7 @@
 <?php
 /*
   Squall - functional programming for PHP with a syntax that makes sense
-  in public domain | by Proger_XP | http://proger.i-forge.net
+  in public domain | by Proger_XP | http://proger.me
   http://github.com/ProgerXP/Squall
 */
 namespace Squall;
@@ -1986,10 +1986,11 @@ function init($namespace = '\\', $name = 'S', $class = 'Functions') {
     wrongArg('Namespace or name given to '.__FUNCTION__.' has wrong characters.');
   }
 
-  eval("namespace $namespace;function $name(){return call_user_func_array(".
-       "array('$class', 'make'), func_get_args());}");
+  class_alias($class, ltrim("$namespace\\$name", '\\'));
 
-  class_alias($class, "$namespace\\$name");
+  $namespace and $namespace = "namespace $namespace;";
+  eval($namespace."function $name(){return call_user_func_array(".
+       "array('$class', 'make'), func_get_args());}");
 }
 
 function initEx($namespace = '\\', $name = 'S') {

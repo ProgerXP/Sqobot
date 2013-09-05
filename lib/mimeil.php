@@ -785,7 +785,7 @@ class MiMeil {
   }
 
   // Does everything that has to be done in order to send this message but doesn't
-  // actually transmit it like Send(). You can attach your handler to 'send' event
+  // actually transmit it like send(). You can attach your handler to 'send' event
   // and dump the final message to be delivered into a .eml file for review.
   //
   // After calling this object's properties are modified depending on the settings.
