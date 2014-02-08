@@ -1,0 +1,5 @@
+Any search result page from emls.ru like this:
+
+http://emls.ru/zagorod/?query=type2/1/type3/1/type5/1/pmin/2000/pmax/5500/slmin/7/sq/1/s/1/sort1/7/dir1/1/interval/3
+
+Pages are walked till the end automatically.
