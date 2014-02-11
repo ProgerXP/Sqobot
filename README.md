@@ -10,9 +10,9 @@ Sqobot is specifically focused on stability and maximum independence from human 
 
 Licensed in public domain. Uses [MiMeil](https://github.com/ProgerXP/MiMeil) for message delivery and [Squall](https://github.com/ProgerXP/Squall) for concise & functional PHP programming.
 
-Visit author's homepage at http://proger.me. 
+Visit author's homepage at http://proger.me.
 
-## Basic concepts 
+## Basic concepts
 
 **Node** is a remote Sqobot instance. Typically nodes are located on physically different machines although its not a requirement. Node has its own access URL (web interface address) and username/password for HTTP Basic Authentication.
 
@@ -36,7 +36,7 @@ class SMyParser extends Sqissor {
   protected function doSlice($data, array $extra) {
     $nextPage = $this->regexp($data, '~<a class="page" href="([^"]+)~', 1);
     $this->enqueue($nextPage, 'myparser');
-    
+
     $weather = $this->regexp($data, '~<b id="wtype">([^<]+)~', 1);
     $temperature = $this->regexp($data, '~<span class="cel">.*?(\d+)C~', 1);
     $date = time();
@@ -51,7 +51,7 @@ This code will take a remote page, pull URL of the next page from it and enqueue
 
 As you might notice there's no **WeatherRow** class in Sqobot. Just like our new _Sqissor_ it's a class-to-be-inherited from **Row** and it might look like this:
 ```PHP
-// Unlike Sqissor this class can have any name as it's not accessed by Sqobot core 
+// Unlike Sqissor this class can have any name as it's not accessed by Sqobot core
 // but only from within your code. It can be placed into user/WeatherRow.php.
 class WeatherRow extends Row {
   static $defaultTable = 'weather';
@@ -88,13 +88,15 @@ Basic tasks are:
 * **queue** - the main workhorse that parses individual queue items or adds new ones
 * **pages** - supports distributed crawlers; with this task main node keeps all its satellites in sync so that they don't recrawl already processed pages
 * **patch** - packs Sqobot scripts and/or other files into a ZIP archive for later redistribution on remote nodes, or just a backup
-* **sql** - produces SQL templates for populating the database 
+* **sql** - produces SQL templates for populating the database
 
 Normal setup is to have a cronjob like this to process enqueued items for 59 minutes, then cool down for 1 minute and restart:
 ```
-0   *   *   *   *   /home/sqobot/cli cycle --for=59 
+0   *   *   *   *   /home/sqobot/cli cycle --for=59
 ```
 
-## Support 
+However, if your webhost doesn't support cron you can always use web polling via Sqobot's web interface using the **cron** web task. There are many services like *Iron.io* that let you schedule HTTP requests to custom URL(s) at regular intervals.
+
+## Support
 
 If you have questions or suggestions feel free to contact me at proger.xp@gmail.com or via other means at http://proger.me.
