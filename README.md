@@ -95,7 +95,7 @@ Normal setup is to have a cronjob like this to process enqueued items for 59 min
 0   *   *   *   *   /home/sqobot/cli cycle --for=59
 ```
 
-However, if your webhost doesn't support cron you can always use web polling via Sqobot's web interface using the **cron** web task. There are many services like *Iron.io* that let you schedule HTTP requests to custom URL(s) at regular intervals.
+However, if your webhost doesn't support cron you can always use web polling via Sqobot's web interface using the **cron** web task. There are many services like *Iron.io* or EasyCron.com that let you schedule HTTP requests to custom URL(s) at regular intervals.
 
 ## Support
 
